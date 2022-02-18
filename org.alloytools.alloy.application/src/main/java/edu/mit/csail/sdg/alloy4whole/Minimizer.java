@@ -7,6 +7,7 @@ import java.util.Map;
 
 import edu.mit.csail.sdg.alloy4.A4Reporter;
 import edu.mit.csail.sdg.alloy4.ConstList;
+import edu.mit.csail.sdg.alloy4.ErrorWarning;
 import edu.mit.csail.sdg.ast.Attr;
 import edu.mit.csail.sdg.ast.Command;
 import edu.mit.csail.sdg.ast.Expr;
@@ -76,6 +77,27 @@ public class Minimizer {
 
     }
 
+    A4Reporter rep = new A4Reporter() {
+
+        // For example, here we choose to display each "warning" by printing
+        // it to System.out
+        @Override
+        public void warning(ErrorWarning msg) {
+            System.out.print("Relevance Warning:\n" + (msg.toString().trim()) + "\n\n");
+            System.out.flush();
+        }
+
+        @Override
+        public void bound(String msg) {
+            System.out.println(msg);
+        }
+
+        @Override
+        public void scope(String msg) {
+            System.out.println(msg);
+        }
+    };
+
     public class DdminAbsInstBounds extends AbstractDdmin<BoundElement> {
 
         private boolean low = true;
@@ -94,13 +116,21 @@ public class Minimizer {
             // check negation of command for instances
             List<Sig> cmdSigs = new ArrayList<>(sigs);
             Command cmdWithBounds = null;
+            Command cmdSanity = null;
             if (low) {
                 cmdWithBounds = addBounds(cmd.change(cmd.formula.not()), candidate, upper, cmdSigs);
+                cmdSanity = addBounds(cmd, candidate, upper, new ArrayList<>());
             } else {
                 cmdWithBounds = addBounds(cmd.change(cmd.formula.not()), lower, candidate, cmdSigs);
+                cmdSanity = addBounds(cmd, lower, candidate, new ArrayList<>());
             }
 
-            A4Solution ans = TranslateAlloyToKodkod.execute_command(A4Reporter.NOP, cmdSigs, cmdWithBounds, opt);
+            A4Solution ansSanity = TranslateAlloyToKodkod.execute_command(rep, cmdSigs, cmdSanity, opt);
+            if (!ansSanity.satisfiable()) {
+                throw new RuntimeException("Unexpected UNSAT result of problem with new bounds that should include the original instance.");
+            }
+
+            A4Solution ans = TranslateAlloyToKodkod.execute_command(rep, cmdSigs, cmdWithBounds, opt);
             return !ans.satisfiable();
         }
     }
@@ -114,6 +144,10 @@ public class Minimizer {
         Minimizer m = new Minimizer();
         m.minimize(world.getAllReachableSigs(), command, options);
 
+        printBounds(m);
+    }
+
+    private static void printBounds(Minimizer m) {
         System.out.println("LB = " + m.lower);
         System.out.println("UB = " + m.upper);
     }
@@ -122,7 +156,7 @@ public class Minimizer {
         this.sigs = sigs;
         this.cmd = cmd;
         this.opt = opt;
-        A4Solution ans = TranslateAlloyToKodkod.execute_command(A4Reporter.NOP, sigs, cmd, opt);
+        A4Solution ans = TranslateAlloyToKodkod.execute_command(rep, sigs, cmd, opt);
 
         initBounds(ans);
 
@@ -145,6 +179,7 @@ public class Minimizer {
                 // no change in upper; this means lower is still valid
                 rerun = false;
             }
+            printBounds(this);
         }
     }
 
@@ -255,6 +290,9 @@ public class Minimizer {
                 for (BoundElement ie : instance) {
                     // only care about this signature
                     if (ie.s == e.s) {
+
+                        //FIXME this likely fails with inheritance!!!
+
                         PrimSig s = oneSig.get(ie.atomName());
                         if (cmdSigs.contains(s)) {
                             // switch to the lone version for upper bound
