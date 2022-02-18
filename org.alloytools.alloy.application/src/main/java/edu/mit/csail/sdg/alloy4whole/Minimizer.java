@@ -238,6 +238,7 @@ public class Minimizer {
                         tuple = tuple.product(s);
                     }
                     // add sings if necessary
+                    // TODO be aware that this means we have to add these when presenting bounds to the user
                     if (!cmdSigs.contains(s)) {
                         cmdSigs.add(s);
                     }
@@ -247,7 +248,34 @@ public class Minimizer {
         }
 
         // upper bounds put a restriction on max from the instance
-        // TODO
+        for (BoundElement e : upper) {
+            if (e.s != null) {
+                // we need to bound the signature to the upper bound of the instance
+                Expr atMost = null;
+                for (BoundElement ie : instance) {
+                    // only care about this signature
+                    if (ie.s == e.s) {
+                        PrimSig s = oneSig.get(ie.atomName());
+                        if (cmdSigs.contains(s)) {
+                            // switch to the lone version for upper bound
+                            s = loneSig.get(ie.atomName());
+                            cmdSigs.add(s);
+                        }
+                        if (atMost == null) {
+                            atMost = s;
+                        } else {
+                            atMost = atMost.plus(s);
+                        }
+                    }
+                }
+                // there might not have been an atom in the instance so upper bound is empty set
+                if (atMost == null) {
+                    f = f.and(e.s.no());
+                } else {
+                    f = f.and(e.s.in(atMost));
+                }
+            }
+        }
 
         return cmd.change(f);
     }
