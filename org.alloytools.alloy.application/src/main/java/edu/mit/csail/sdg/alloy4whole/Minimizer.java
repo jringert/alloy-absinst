@@ -203,8 +203,15 @@ public class Minimizer {
                         e.t = t;
                         lower.add(e);
                         boundElem4Atom.put(e.atomName(), e);
-                        oneSig.put(e.atomName(), new Sig.PrimSig(e.atomName(), (PrimSig) e.s, Attr.ONE));
-                        loneSig.put(e.atomName(), new Sig.PrimSig(e.atomName(), (PrimSig) e.s, Attr.LONE));
+                        // we only do it for the actual signature otherwise
+                        // this would lead to creating a tuple twice or multiple times if it shows
+                        // up multiple times across the inheritance hierarchy
+                        if (e.atomName().startsWith(s.label.replaceAll("this/", ""))) {
+                            oneSig.put(e.atomName(), new Sig.PrimSig(e.atomName(), (PrimSig) e.s, Attr.ONE));
+                            loneSig.put(e.atomName(), new Sig.PrimSig(e.atomName(), (PrimSig) e.s, Attr.LONE));
+                        } else {
+                            System.out.println(e.atomName() + " not in " + s.label);
+                        }
                     }
                 }
                 for (Field f : s.getFields()) {
@@ -265,6 +272,7 @@ public class Minimizer {
             } else {
                 // fields added as constraints
                 Expr tuple = null;
+                boolean sigMissing = false;
                 for (int i = 0; i < e.t.arity(); i++) {
                     PrimSig s = oneSig.get(e.t.atom(i));
                     if (tuple == null) {
@@ -272,13 +280,15 @@ public class Minimizer {
                     } else {
                         tuple = tuple.product(s);
                     }
-                    // add sings if necessary
-                    // TODO be aware that this means we have to add these when presenting bounds to the user
+                    // reject tuple if sig is missing
                     if (!cmdSigs.contains(s)) {
-                        cmdSigs.add(s);
+                        sigMissing = true;
+                        break;
                     }
                 }
-                f = f.and(tuple.in(e.f));
+                if (!sigMissing) {
+                    f = f.and(tuple.in(e.f));
+                }
             }
         }
 
