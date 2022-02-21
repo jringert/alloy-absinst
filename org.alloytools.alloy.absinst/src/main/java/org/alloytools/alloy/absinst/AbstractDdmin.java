@@ -1,4 +1,4 @@
-package edu.mit.csail.sdg.alloy4whole;
+package org.alloytools.alloy.absinst;
 
 
 import java.util.ArrayList;

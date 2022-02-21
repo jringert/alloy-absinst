@@ -1,4 +1,4 @@
-package edu.mit.csail.sdg.alloy4whole;
+package org.alloytools.alloy.absinst;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
@@ -17,6 +17,7 @@ public class MinimizerTest {
     @Test
     public void testAddrBook1aRun() {
         String module = "../org.alloytools.alloy.extra/extra/models/book/chapter2/addressBook1a.als";
+        
         int cmdNum = 0;
 
         Minimizer m = testMin(module, cmdNum);

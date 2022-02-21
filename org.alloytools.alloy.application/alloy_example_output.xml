@@ -1,0 +1,84 @@
+<alloy builddate="1970-01-01T00:00:00Z">
+
+<instance bitwidth="4" maxseq="3" mintrace="-1" maxtrace="-1" command="Check lookupYields for 3 but 4 Book" filename="" tracelength="1" backloop="0">
+
+<sig label="seq/Int" ID="0" parentID="1" builtin="yes">
+</sig>
+
+<sig label="Int" ID="1" parentID="2" builtin="yes">
+</sig>
+
+<sig label="String" ID="3" parentID="2" builtin="yes">
+</sig>
+
+<sig label="this/Addr" ID="4" parentID="5">
+   <atom label="Addr$0"/>
+</sig>
+
+<sig label="this/Alias" ID="6" parentID="7">
+   <atom label="Alias$0"/>
+</sig>
+
+<sig label="this/Group" ID="8" parentID="7">
+   <atom label="Group$0"/>
+</sig>
+
+<sig label="this/Name" ID="7" parentID="5" abstract="yes">
+</sig>
+
+<sig label="this/Target" ID="5" parentID="2" abstract="yes">
+</sig>
+
+<sig label="this/Book" ID="9" parentID="2">
+   <atom label="Book$0"/>
+   <atom label="Book$1"/>
+   <atom label="Book$2"/>
+   <atom label="Book$3"/>
+</sig>
+
+<field label="names" ID="10" parentID="9">
+   <tuple> <atom label="Book$0"/> <atom label="Group$0"/> </tuple>
+   <tuple> <atom label="Book$0"/> <atom label="Alias$0"/> </tuple>
+   <tuple> <atom label="Book$1"/> <atom label="Group$0"/> </tuple>
+   <tuple> <atom label="Book$1"/> <atom label="Alias$0"/> </tuple>
+   <tuple> <atom label="Book$2"/> <atom label="Group$0"/> </tuple>
+   <tuple> <atom label="Book$2"/> <atom label="Alias$0"/> </tuple>
+   <tuple> <atom label="Book$3"/> <atom label="Group$0"/> </tuple>
+   <tuple> <atom label="Book$3"/> <atom label="Alias$0"/> </tuple>
+   <types> <type ID="9"/> <type ID="7"/> </types>
+</field>
+
+<field label="addr" ID="11" parentID="9">
+   <tuple> <atom label="Book$0"/> <atom label="Group$0"/> <atom label="Alias$0"/> </tuple>
+   <tuple> <atom label="Book$0"/> <atom label="Alias$0"/> <atom label="Addr$0"/> </tuple>
+   <tuple> <atom label="Book$1"/> <atom label="Group$0"/> <atom label="Alias$0"/> </tuple>
+   <tuple> <atom label="Book$1"/> <atom label="Alias$0"/> <atom label="Addr$0"/> </tuple>
+   <tuple> <atom label="Book$2"/> <atom label="Group$0"/> <atom label="Addr$0"/> </tuple>
+   <tuple> <atom label="Book$2"/> <atom label="Alias$0"/> <atom label="Group$0"/> </tuple>
+   <tuple> <atom label="Book$3"/> <atom label="Group$0"/> <atom label="Alias$0"/> </tuple>
+   <tuple> <atom label="Book$3"/> <atom label="Alias$0"/> <atom label="Addr$0"/> </tuple>
+   <types> <type ID="9"/> <type ID="7"/> <type ID="5"/> </types>
+</field>
+
+<sig label="BookOrder/Ord" ID="12" parentID="2" one="yes" private="yes">
+   <atom label="BookOrder/Ord$0"/>
+</sig>
+
+<field label="First" ID="13" parentID="12" private="yes">
+   <tuple> <atom label="BookOrder/Ord$0"/> <atom label="Book$0"/> </tuple>
+   <types> <type ID="12"/> <type ID="9"/> </types>
+</field>
+
+<field label="Next" ID="14" parentID="12" private="yes">
+   <tuple> <atom label="BookOrder/Ord$0"/> <atom label="Book$0"/> <atom label="Book$1"/> </tuple>
+   <tuple> <atom label="BookOrder/Ord$0"/> <atom label="Book$1"/> <atom label="Book$2"/> </tuple>
+   <tuple> <atom label="BookOrder/Ord$0"/> <atom label="Book$2"/> <atom label="Book$3"/> </tuple>
+   <types> <type ID="12"/> <type ID="9"/> <type ID="9"/> </types>
+</field>
+
+<sig label="univ" ID="2" builtin="yes" var="yes">
+</sig>
+
+</instance>
+
+</alloy>
