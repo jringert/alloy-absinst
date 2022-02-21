@@ -4,6 +4,7 @@ import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.stream.Collectors;
 
 import edu.mit.csail.sdg.alloy4.A4Reporter;
 import edu.mit.csail.sdg.alloy4.ConstList;
@@ -39,12 +40,28 @@ import edu.mit.csail.sdg.translator.TranslateAlloyToKodkod;
  */
 public class Minimizer {
 
-    private ConstList<Sig>             sigs;
-    private Command                    cmd;
-    private List<BoundElement>         lower          = new ArrayList<>();
+    /**
+     * signatures of the original problem
+     */
+    private ConstList<Sig>             sigsOrig;
+    /**
+     * original command
+     */
+    private Command                    cmdOrig;
+    /**
+     * original options
+     */
+    private A4Options                  optOrig;
+
     private List<BoundElement>         instance       = new ArrayList<>();
+    /**
+     * current lower bound (will shrink over runs)
+     */
+    private List<BoundElement>         lower          = new ArrayList<>();
+    /**
+     * current upper bound (will shrink over runs)
+     */
     private List<BoundElement>         upper          = new ArrayList<>();
-    private A4Options                  opt;
 
     protected Map<String,BoundElement> boundElem4Atom = new LinkedHashMap<>();
     protected Map<String,PrimSig>      oneSig         = new LinkedHashMap<>();
@@ -87,15 +104,15 @@ public class Minimizer {
             System.out.flush();
         }
 
-        @Override
-        public void bound(String msg) {
-            System.out.println(msg);
-        }
+        //        @Override
+        //        public void bound(String msg) {
+        //            System.out.println(msg);
+        //        }
 
-        @Override
-        public void scope(String msg) {
-            System.out.println(msg);
-        }
+        //        @Override
+        //        public void scope(String msg) {
+        //            System.out.println(msg);
+        //        }
     };
 
     public class DdminAbsInstBounds extends AbstractDdmin<BoundElement> {
@@ -114,23 +131,23 @@ public class Minimizer {
         @Override
         protected boolean check(List<BoundElement> candidate) {
             // check negation of command for instances
-            List<Sig> cmdSigs = new ArrayList<>(sigs);
+            List<Sig> cmdSigs = new ArrayList<>(sigsOrig);
             Command cmdWithBounds = null;
             Command cmdSanity = null;
             if (low) {
-                cmdWithBounds = addBounds(cmd.change(cmd.formula.not()), candidate, upper, cmdSigs);
-                cmdSanity = addBounds(cmd, candidate, upper, new ArrayList<>());
+                cmdWithBounds = addBounds(cmdOrig.change(cmdOrig.formula.not()), candidate, upper, cmdSigs);
+                cmdSanity = addBounds(cmdOrig, candidate, upper, new ArrayList<>());
             } else {
-                cmdWithBounds = addBounds(cmd.change(cmd.formula.not()), lower, candidate, cmdSigs);
-                cmdSanity = addBounds(cmd, lower, candidate, new ArrayList<>());
+                cmdWithBounds = addBounds(cmdOrig.change(cmdOrig.formula.not()), lower, candidate, cmdSigs);
+                cmdSanity = addBounds(cmdOrig, lower, candidate, new ArrayList<>());
             }
 
-            A4Solution ansSanity = TranslateAlloyToKodkod.execute_command(rep, cmdSigs, cmdSanity, opt);
+            A4Solution ansSanity = TranslateAlloyToKodkod.execute_command(rep, cmdSigs, cmdSanity, optOrig);
             if (!ansSanity.satisfiable()) {
                 throw new RuntimeException("Unexpected UNSAT result of problem with new bounds that should include the original instance.");
             }
 
-            A4Solution ans = TranslateAlloyToKodkod.execute_command(rep, cmdSigs, cmdWithBounds, opt);
+            A4Solution ans = TranslateAlloyToKodkod.execute_command(rep, cmdSigs, cmdWithBounds, optOrig);
             return !ans.satisfiable();
         }
     }
@@ -153,9 +170,9 @@ public class Minimizer {
     }
 
     public void minimize(ConstList<Sig> sigs, Command cmd, A4Options opt) {
-        this.sigs = sigs;
-        this.cmd = cmd;
-        this.opt = opt;
+        this.sigsOrig = sigs;
+        this.cmdOrig = cmd;
+        this.optOrig = opt;
         A4Solution ans = TranslateAlloyToKodkod.execute_command(rep, sigs, cmd, opt);
 
         initBounds(ans);
@@ -185,8 +202,6 @@ public class Minimizer {
 
     /**
      *
-     * nonexistance for upper bounds -- we need calculated scopes -- we need to name
-     *
      * upper bound will never go below instance no S[n+1]..no S[scope]
      *
      *
@@ -201,16 +216,14 @@ public class Minimizer {
                         BoundElement e = new BoundElement();
                         e.s = s;
                         e.t = t;
-                        lower.add(e);
-                        boundElem4Atom.put(e.atomName(), e);
                         // we only do it for the actual signature otherwise
                         // this would lead to creating a tuple twice or multiple times if it shows
                         // up multiple times across the inheritance hierarchy
-                        if (e.atomName().startsWith(s.label.replaceAll("this/", ""))) {
+                        if (instanceOf(e, s)) {
+                            lower.add(e);
+                            boundElem4Atom.put(e.atomName(), e);
                             oneSig.put(e.atomName(), new Sig.PrimSig(e.atomName(), (PrimSig) e.s, Attr.ONE));
                             loneSig.put(e.atomName(), new Sig.PrimSig(e.atomName(), (PrimSig) e.s, Attr.LONE));
-                        } else {
-                            System.out.println(e.atomName() + " not in " + s.label);
                         }
                     }
                 }
@@ -246,6 +259,27 @@ public class Minimizer {
 
     }
 
+    /**
+     * check whether this atom is a direct instance of the signature (false if it is
+     * an instance of a sub-signature)
+     *
+     * @param e
+     * @param s
+     * @return
+     */
+    private boolean instanceOf(BoundElement e, Sig s) {
+        return e.atomName().startsWith(s.label.replaceAll("this/", ""));
+    }
+
+    /**
+     * checks relevance of signatures for computing bounds
+     *
+     * bounds should be ignored for signatures where this returns false, e.g.,
+     * built-in or meta sigs
+     *
+     * @param s
+     * @return
+     */
     private boolean isRelevant(Sig s) {
         if (s.builtin) {
             return false;
@@ -262,7 +296,8 @@ public class Minimizer {
     }
 
     public Command addBounds(Command cmd, List<BoundElement> lower, List<BoundElement> upper, List<Sig> cmdSigs) {
-        Expr f = cmd.formula;
+        Expr lowerBound = null;
+        Expr upperBound = null;
 
         // lower bounds require things to be there
         for (BoundElement e : lower) {
@@ -272,7 +307,7 @@ public class Minimizer {
             } else {
                 // fields added as constraints
                 Expr tuple = null;
-                boolean sigMissing = false;
+                boolean sigMissingAndTupleInvalid = false;
                 for (int i = 0; i < e.t.arity(); i++) {
                     PrimSig s = oneSig.get(e.t.atom(i));
                     if (tuple == null) {
@@ -281,13 +316,19 @@ public class Minimizer {
                         tuple = tuple.product(s);
                     }
                     // reject tuple if sig is missing
-                    if (!cmdSigs.contains(s)) {
-                        sigMissing = true;
+                    if (!hasAtom(lower, e.t.atom(i))) {
+                        sigMissingAndTupleInvalid = true;
+                        // stop handling this tuple (inner loop)
                         break;
                     }
                 }
-                if (!sigMissing) {
-                    f = f.and(tuple.in(e.f));
+                if (!sigMissingAndTupleInvalid) {
+                    Expr bound = tuple.in(e.f);
+                    if (lowerBound == null) {
+                        lowerBound = bound;
+                    } else {
+                        lowerBound = lowerBound.and(bound);
+                    }
                 }
             }
         }
@@ -299,12 +340,9 @@ public class Minimizer {
                 Expr atMost = null;
                 for (BoundElement ie : instance) {
                     // only care about this signature
-                    if (ie.s == e.s) {
-
-                        //FIXME this likely fails with inheritance!!!
-
+                    if (ie.s == e.s && instanceOf(ie, e.s)) {
                         PrimSig s = oneSig.get(ie.atomName());
-                        if (cmdSigs.contains(s)) {
+                        if (!cmdSigs.contains(s)) {
                             // switch to the lone version for upper bound
                             s = loneSig.get(ie.atomName());
                             cmdSigs.add(s);
@@ -316,18 +354,78 @@ public class Minimizer {
                         }
                     }
                 }
+                // collect union of subsignatures of s
+                Expr subs = null;
+                for (Sig ch : sigsOrig) {
+                    if (ch instanceof PrimSig) {
+                        PrimSig pch = (PrimSig) ch;
+                        if (pch.parent == e.s) {
+                            // no need to look for further children as inheritance takes care of that
+                            if (subs == null) {
+                                subs = pch;
+                            } else {
+                                subs = subs.plus(pch);
+                            }
+                        }
+                    }
+                }
+
+                Expr bound = null;
                 // there might not have been an atom in the instance so upper bound is empty set
-                if (atMost == null) {
-                    f = f.and(e.s.no());
+                if (atMost == null && subs == null) {
+                    // e.s doesn't have sub signatures and there is no atom for e.s
+                    // we set s = {}
+                    bound = e.s.no();
+                } else if (atMost == null) {
+                    // there is no atom in e.s, but maybe in its subsigs
+                    // we set s = children of s
+                    bound = e.s.equal(subs);
                 } else {
-                    f = f.and(e.s.in(atMost));
+                    // we set s in (atoms + children sigs)
+                    bound = e.s.in(atMost.plus(subs));
+                }
+                if (upperBound == null) {
+                    upperBound = bound;
+                } else {
+                    upperBound = upperBound.and(bound);
                 }
             }
         }
 
+        Expr f = cmd.formula;
+        if (lowerBound != null) {
+            f = f.and(lowerBound);
+            System.out.println("LB for check: one sigs for atoms of " + atomsOf(lower) + " and " + lowerBound);
+        } else {
+            System.out.println("LB for check: one sigs for atoms of " + atomsOf(lower));
+        }
+        System.out.println("UB for check: " + upperBound);
+        if (upperBound != null) {
+            f = f.and(upperBound);
+        }
         return cmd.change(f);
     }
 
+    private List<BoundElement> atomsOf(List<BoundElement> l) {
+        return l.stream().filter(p -> p.isAtom()).collect(Collectors.toList());
+    }
+
+    private boolean hasAtom(List<BoundElement> bound, String atom) {
+        for (BoundElement be : bound) {
+            if (atom.equals(be.atomName())) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    public List<BoundElement> getLowerBound() {
+        return this.lower;
+    }
+
+    public List<BoundElement> getUpperBound() {
+        return this.upper;
+    }
 }
 
 
