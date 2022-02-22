@@ -12,6 +12,7 @@ import edu.mit.csail.sdg.alloy4.ErrorWarning;
 import edu.mit.csail.sdg.ast.Attr;
 import edu.mit.csail.sdg.ast.Command;
 import edu.mit.csail.sdg.ast.Expr;
+import edu.mit.csail.sdg.ast.ExprConstant;
 import edu.mit.csail.sdg.ast.Module;
 import edu.mit.csail.sdg.ast.Sig;
 import edu.mit.csail.sdg.ast.Sig.Field;
@@ -310,8 +311,9 @@ public class Minimizer {
                 boolean sigMissingAndTupleInvalid = false;
                 for (int i = 0; i < e.t.arity(); i++) {
                 	// FIXME this fails on integer atoms
-                    PrimSig s = oneSig.get(e.t.atom(i));
-                    if (tuple == null) {
+                    //PrimSig s = oneSig.get(e.t.atom(i));
+                    Expr s = retrieveAtomExpr(e.t.atom(i), true);
+                	if (tuple == null) {
                         tuple = s;
                     } else {
                         tuple = tuple.product(s);
@@ -407,7 +409,33 @@ public class Minimizer {
         return cmd.change(f);
     }
 
-    private List<BoundElement> atomsOf(List<BoundElement> l) {
+    /**
+     * retrieves an expression for the given atom 
+     * 
+     * this can be a signature or a constant, e.g., integer
+     * 
+     * @param atom
+     * @param useOneSig in case of signatures use one (lone if false)
+     * @return
+     */
+    private Expr retrieveAtomExpr(String atom, boolean useOneSig) {
+		Expr e = null;
+    	if (useOneSig) {
+			e = oneSig.get(atom);
+		} else {
+			e = loneSig.get(atom);
+		}
+    	if (e == null) {
+    		try {
+    			int i = Integer.parseInt(atom);
+    			e = ExprConstant.makeNUMBER(i);
+			} catch (Exception e2) {
+			}
+    	}
+		return e;
+	}
+
+	private List<BoundElement> atomsOf(List<BoundElement> l) {
         return l.stream().filter(p -> p.isAtom()).collect(Collectors.toList());
     }
 
