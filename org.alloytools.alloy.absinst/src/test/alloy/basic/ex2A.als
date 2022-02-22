@@ -1,3 +1,3 @@
 sig A {}
 
-run {some A}
+run {#A = 2}
