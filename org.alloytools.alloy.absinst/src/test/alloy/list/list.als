@@ -11,11 +11,3 @@ fact Reachability {List.header.*link = Node}
 
 // original run command
 run {Acyclic and NoRepetition}
-
-// partial instance such that all extensions satisfy the property, but removing any atom or tuple would not
-one sig Node1 extends Node{}{no link}
-pred xxx {List.header = Node1}
-
-// should not have a solution, but does once one line is missing above
-run {xxx and !(Acyclic and NoRepetition)}
-

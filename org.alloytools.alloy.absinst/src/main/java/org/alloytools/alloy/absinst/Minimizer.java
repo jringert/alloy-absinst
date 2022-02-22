@@ -309,6 +309,7 @@ public class Minimizer {
                 Expr tuple = null;
                 boolean sigMissingAndTupleInvalid = false;
                 for (int i = 0; i < e.t.arity(); i++) {
+                	// FIXME this fails on integer atoms
                     PrimSig s = oneSig.get(e.t.atom(i));
                     if (tuple == null) {
                         tuple = s;
