@@ -51,7 +51,7 @@ public class MinimizerTest {
         assertTrue(m.getUpperBound().isEmpty());
     }
 
-    private Minimizer testMin(String module, int cmdNum) {
+    protected Minimizer testMin(String module, int cmdNum) {
         Module world = CompUtil.parseEverything_fromFile(A4Reporter.NOP, null, module);
         Command command = world.getAllCommands().get(cmdNum);
         A4Options options = new A4Options();
