@@ -1,18 +1,11 @@
 package org.alloytools.alloy.absinst;
 
-import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
 
 import org.junit.Test;
 
-import edu.mit.csail.sdg.alloy4.A4Reporter;
-import edu.mit.csail.sdg.ast.Command;
-import edu.mit.csail.sdg.ast.Module;
-import edu.mit.csail.sdg.parser.CompUtil;
-import edu.mit.csail.sdg.translator.A4Options;
 
-
-public class MinimizerListTest extends MinimizerTest {
+public class MinimizerListTest {
 
     @Test
     public void testListRun() {
@@ -20,7 +13,7 @@ public class MinimizerListTest extends MinimizerTest {
         
         int cmdNum = 0;
 
-        Minimizer m = testMin(module, cmdNum);
+        Minimizer m = MinimizerUtil.testMin(module, cmdNum);
 
         // trivial empty bounds because the run predicate is TRUE
         assertTrue(m.getLowerBound().isEmpty());
