@@ -1,12 +1,11 @@
 package org.alloytools.alloy.absinst;
 
 import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertTrue;
 
 import org.junit.Test;
 
 
-public class MinimizerBasicTest {
+public class MinimizerBasicAtomsTest {
 
     @Test
     public void testOneARun() {
@@ -16,7 +15,6 @@ public class MinimizerBasicTest {
 
         Minimizer m = MinimizerUtil.testMin(module, cmdNum);
 
-        // trivial empty bounds because the run predicate is TRUE
         assertEquals("[A$0]", m.getLowerBound().toString());
         assertEquals("[UB for this/A]", m.getUpperBound().toString());
     }
@@ -29,7 +27,6 @@ public class MinimizerBasicTest {
 
         Minimizer m = MinimizerUtil.testMin(module, cmdNum);
 
-        // trivial empty bounds because the run predicate is TRUE
         assertEquals("[A$0]", m.getLowerBound().toString());
         assertEquals("[]", m.getUpperBound().toString());
     }
@@ -43,10 +40,32 @@ public class MinimizerBasicTest {
 
         Minimizer m = MinimizerUtil.testMin(module, cmdNum);
 
-        // trivial empty bounds because the run predicate is TRUE
         assertEquals("[A$0, A$1]", m.getLowerBound().toString());
         assertEquals("[UB for this/A]", m.getUpperBound().toString());
     }
 
 
+    @Test
+    public void testOneAtwoBRun() {
+        String module = "src/test/alloy/basic/oneAtwoB.als";
+        
+        int cmdNum = 0;
+
+        Minimizer m = MinimizerUtil.testMin(module, cmdNum);
+
+        assertEquals("[A$0, B$0, B$1]", m.getLowerBound().toString());
+        assertEquals("[UB for this/A, UB for this/B]", m.getUpperBound().toString());
+    }
+
+    @Test
+    public void testOneABsubRun() {
+        String module = "src/test/alloy/basic/oneABsub.als";
+        
+        int cmdNum = 0;
+
+        Minimizer m = MinimizerUtil.testMin(module, cmdNum);
+
+        assertEquals("[A$0]", m.getLowerBound().toString());
+        assertEquals("[UB for this/B, UB for this/A]", m.getUpperBound().toString());
+    }
 }
