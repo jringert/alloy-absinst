@@ -310,8 +310,6 @@ public class Minimizer {
                 Expr tuple = null;
                 boolean sigMissingAndTupleInvalid = false;
                 for (int i = 0; i < e.t.arity(); i++) {
-                	// FIXME this fails on integer atoms
-                    //PrimSig s = oneSig.get(e.t.atom(i));
                     Expr s = retrieveAtomExpr(e.t.atom(i), true);
                 	if (tuple == null) {
                         tuple = s;
@@ -392,6 +390,9 @@ public class Minimizer {
                 } else {
                     upperBound = upperBound.and(bound);
                 }
+            } else {
+            	// TODO now do upper bounds for relations
+            	// again requires adding lone sigs if necessary
             }
         }
 
