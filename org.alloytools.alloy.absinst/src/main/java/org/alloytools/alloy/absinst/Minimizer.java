@@ -177,24 +177,35 @@ public class Minimizer {
         A4Solution ans = TranslateAlloyToKodkod.execute_command(rep, sigs, cmd, opt);
 
         initBounds(ans);
+        
+        {
+        	ArrayList<Sig> sigsSanity = new ArrayList<>(sigs);
+        	Command cmdSanity = addBounds(cmd, lower, upper, sigsSanity);
+        	A4Solution ansSanity = TranslateAlloyToKodkod.execute_command(rep, sigsSanity, cmdSanity, opt);
+        	if (!ansSanity.satisfiable()) {
+        		throw new RuntimeException("Problem unsat with original bounds.");
+        	}
+        }
 
         boolean rerun = true;
+        DdminAbsInstBounds min;
         while (rerun) {
             rerun = false;
-            DdminAbsInstBounds min = new DdminAbsInstBounds(true);
-            List<BoundElement> newLower = min.minimize(lower);
-            if (lower.size() > newLower.size()) {
-                rerun = true;
-                lower = newLower;
-            }
-
+            
             min = new DdminAbsInstBounds(false);
             List<BoundElement> newUpper = min.minimize(upper);
             if (upper.size() > newUpper.size()) {
-                rerun = true;
-                upper = newUpper;
+            	rerun = true;
+            	upper = newUpper;
+            }
+
+            min = new DdminAbsInstBounds(true);
+            List<BoundElement> newLower = min.minimize(lower);
+            if (lower.size() > newLower.size()) {
+            	rerun = true;
+            	lower = newLower;
             } else {
-                // no change in upper; this means lower is still valid
+                // no change in lower; this means upper is still valid
                 rerun = false;
             }
             printBounds(this);
