@@ -15,8 +15,8 @@ public class MinimizerBasicTupleTest {
 
         Minimizer m = MinimizerUtil.testMin(module, cmdNum);
 
-        assertEquals("[A$0]", m.getLowerBound().toString());
-        assertEquals("[UB for this/A]", m.getUpperBound().toString());
+        assertEquals("[A$0, A$1, A$0->A$1, A$1->A$0]", m.getLowerBound().toString());
+        assertEquals("[UB for field (this/A <: nx)]", m.getUpperBound().toString());
     }
     
 }

@@ -134,21 +134,21 @@ public class Minimizer {
             // check negation of command for instances
             List<Sig> cmdSigs = new ArrayList<>(sigsOrig);
             Command cmdWithBounds = null;
-            Command cmdSanity = null;
+//            Command cmdSanity = null;
             if (low) {
                 cmdWithBounds = addBounds(cmdOrig.change(cmdOrig.formula.not()), candidate, upper, cmdSigs);
-                cmdSanity = addBounds(cmdOrig, candidate, upper, new ArrayList<>());
+//                cmdSanity = addBounds(cmdOrig, candidate, upper, new ArrayList<>());
             } else {
                 cmdWithBounds = addBounds(cmdOrig.change(cmdOrig.formula.not()), lower, candidate, cmdSigs);
-                cmdSanity = addBounds(cmdOrig, lower, candidate, new ArrayList<>());
+//                cmdSanity = addBounds(cmdOrig, lower, candidate, new ArrayList<>());
             }
 
-            A4Solution ansSanity = TranslateAlloyToKodkod.execute_command(rep, cmdSigs, cmdSanity, optOrig);
-            if (!ansSanity.satisfiable()) {
-                throw new RuntimeException("Unexpected UNSAT result of problem with new bounds that should include the original instance.");
-            }
+//            A4Solution ansSanity = TranslateAlloyToKodkod.execute_command(rep, cmdSigs, cmdSanity, optOrig);
+//            if (!ansSanity.satisfiable()) {
+//                throw new RuntimeException("Unexpected UNSAT result of problem with new bounds that should include the original instance.");
+//            }
 
-            A4Solution ans = TranslateAlloyToKodkod.execute_command(rep, cmdSigs, cmdWithBounds, optOrig);
+            A4Solution ans = TranslateAlloyToKodkod.execute_command(rep, cmdSigs, cmdWithBounds, optOrig);            
             return !ans.satisfiable();
         }
     }
@@ -391,8 +391,51 @@ public class Minimizer {
                     upperBound = upperBound.and(bound);
                 }
             } else {
-            	// TODO now do upper bounds for relations
-            	// again requires adding lone sigs if necessary
+            	Expr atMost = null;
+            	// find instance elements for field (from upper bound)
+            	for (BoundElement ei : instance) {
+            		if (ei.f == e.f) {
+            			Expr tuple = null;
+            			for (int i=0; i < ei.t.arity(); i++) {
+            				// TODO construct tuple based on atoms
+            				String atomName = ei.t.atom(i);
+            				// check if one atom is used
+            				Expr atom = oneSig.get(atomName);            
+            				// atom not found in sigs or one sig not included
+            				if (atom == null || !cmdSigs.contains(atom)) {
+            					atom = retrieveAtomExpr(atomName, false);
+            				}
+            				// add lone sig if needed 
+            				if (atom instanceof PrimSig) {
+            					if (!cmdSigs.contains((Sig) atom)) {
+            						cmdSigs.add((Sig) atom);
+            					}
+            				}
+            				if (tuple == null) {
+            					tuple = atom;
+            				} else {
+            					tuple = tuple.product(atom);
+            				}
+            			}
+            			if (atMost == null) {
+            				atMost = tuple;
+            			} else {
+            				atMost = atMost.plus(tuple);
+            			}
+            		}
+            		
+            	}
+            	Expr bound = null;
+            	if (atMost == null) {
+            		bound = e.f.no();
+            	} else {
+            		bound = e.f.in(atMost);
+            	}
+                if (upperBound == null) {
+                    upperBound = bound;
+                } else {
+                    upperBound = upperBound.and(bound);
+                }
             }
         }
 
