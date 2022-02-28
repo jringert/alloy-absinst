@@ -16,6 +16,6 @@ public class MinimizerColoredTreeTest {
 
         // TODO look into this result
         assertEquals("[]", m.getLowerBound().toString());
-        assertEquals("[UB for this/Node]", m.getUpperBound().toString());
+        assertEquals("[]", m.getUpperBound().toString());
     }
 }
