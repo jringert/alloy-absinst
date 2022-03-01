@@ -13,6 +13,7 @@ import edu.mit.csail.sdg.ast.Attr;
 import edu.mit.csail.sdg.ast.Command;
 import edu.mit.csail.sdg.ast.Expr;
 import edu.mit.csail.sdg.ast.ExprConstant;
+import edu.mit.csail.sdg.ast.ExprList;
 import edu.mit.csail.sdg.ast.Module;
 import edu.mit.csail.sdg.ast.Sig;
 import edu.mit.csail.sdg.ast.Sig.Field;
@@ -45,6 +46,10 @@ public class Minimizer {
      * signatures of the original problem
      */
     private ConstList<Sig>             sigsOrig;
+    /**
+     * original facts
+     */
+    private Expr                       factsOrig;
     /**
      * original command
      */
@@ -105,15 +110,15 @@ public class Minimizer {
             System.out.flush();
         }
 
-        //        @Override
-        //        public void bound(String msg) {
-        //            System.out.println(msg);
-        //        }
+        // @Override
+        // public void bound(String msg) {
+        // System.out.println(msg);
+        // }
 
-        //        @Override
-        //        public void scope(String msg) {
-        //            System.out.println(msg);
-        //        }
+        // @Override
+        // public void scope(String msg) {
+        // System.out.println(msg);
+        // }
     };
 
     public class DdminAbsInstBounds extends AbstractDdmin<BoundElement> {
@@ -134,22 +139,57 @@ public class Minimizer {
             // check negation of command for instances
             List<Sig> cmdSigs = new ArrayList<>(sigsOrig);
             Command cmdWithBounds = null;
-//            Command cmdSanity = null;
+            Command cmdSanity = null;
             if (low) {
-                cmdWithBounds = addBounds(cmdOrig.change(cmdOrig.formula.not()), candidate, upper, cmdSigs);
-//                cmdSanity = addBounds(cmdOrig, candidate, upper, new ArrayList<>());
+                cmdWithBounds = addBounds(negatePred(cmdOrig), candidate, upper, cmdSigs);
+                cmdSanity = addBounds(cmdOrig, candidate, upper, new ArrayList<>());
             } else {
-                cmdWithBounds = addBounds(cmdOrig.change(cmdOrig.formula.not()), lower, candidate, cmdSigs);
-//                cmdSanity = addBounds(cmdOrig, lower, candidate, new ArrayList<>());
+                cmdWithBounds = addBounds(negatePred(cmdOrig), lower, candidate, cmdSigs);
+                cmdSanity = addBounds(cmdOrig, lower, candidate, new ArrayList<>());
             }
 
-//            A4Solution ansSanity = TranslateAlloyToKodkod.execute_command(rep, cmdSigs, cmdSanity, optOrig);
-//            if (!ansSanity.satisfiable()) {
-//                throw new RuntimeException("Unexpected UNSAT result of problem with new bounds that should include the original instance.");
-//            }
+            A4Solution ansSanity = TranslateAlloyToKodkod.execute_command(rep, cmdSigs, cmdSanity, optOrig);
+            if (!ansSanity.satisfiable()) {
+                throw new RuntimeException("Unexpected UNSAT result of problem with new bounds that should include the original instance.");
+            }
 
-            A4Solution ans = TranslateAlloyToKodkod.execute_command(rep, cmdSigs, cmdWithBounds, optOrig);            
+            A4Solution ans = TranslateAlloyToKodkod.execute_command(rep, cmdSigs, cmdWithBounds, optOrig);
             return !ans.satisfiable();
+        }
+
+        /**
+         * negates the original predicate of the run/check command (without negating
+         * facts)
+         *
+         * @param cmdOrig
+         * @return
+         */
+        private Command negatePred(Command cmdOrig) {
+            Expr negPred = null;
+            List<Expr> facts = null;
+            if (factsOrig.equals(ExprConstant.TRUE)) {
+                facts = new ArrayList<>();
+            } else if (factsOrig instanceof ExprList) {
+                facts = new ArrayList<Expr>(((ExprList) factsOrig).args);
+            } else {
+                throw new RuntimeException("Case of facts not handled: " + factsOrig);
+            }
+            switch (cmdOrig.formula.getClass().getSimpleName()) {
+                case "ExprList" :
+                    List<Expr> pred = new ArrayList<Expr>(((ExprList) cmdOrig.formula).args);
+                    pred.removeAll(facts);
+                    if (pred.size() == 0) {
+                        negPred = ExprConstant.FALSE;
+                    } else if (pred.size() == 1) {
+                        negPred = pred.get(0).not();
+                    } else {
+                        negPred = ExprList.make(null, null, ExprList.Op.AND, pred).not();
+                    }
+                    break;
+                default :
+                    throw new RuntimeException("Case of formula in command not handled: " + cmdOrig.formula);
+            }
+            return cmdOrig.change(factsOrig.and(negPred));
         }
     }
 
@@ -160,7 +200,7 @@ public class Minimizer {
         options.solver = A4Options.SatSolver.SAT4J;
 
         Minimizer m = new Minimizer();
-        m.minimize(world.getAllReachableSigs(), command, options);
+        m.minimize(world.getAllReachableSigs(), world.getAllReachableFacts(), command, options);
 
         printBounds(m);
     }
@@ -170,40 +210,41 @@ public class Minimizer {
         System.out.println("UB = " + m.upper);
     }
 
-    public void minimize(ConstList<Sig> sigs, Command cmd, A4Options opt) {
+    public void minimize(ConstList<Sig> sigs, Expr facts, Command cmd, A4Options opt) {
         this.sigsOrig = sigs;
+        this.factsOrig = facts;
         this.cmdOrig = cmd;
         this.optOrig = opt;
         A4Solution ans = TranslateAlloyToKodkod.execute_command(rep, sigs, cmd, opt);
 
         initBounds(ans);
-        
+
         {
-        	ArrayList<Sig> sigsSanity = new ArrayList<>(sigs);
-        	Command cmdSanity = addBounds(cmd, lower, upper, sigsSanity);
-        	A4Solution ansSanity = TranslateAlloyToKodkod.execute_command(rep, sigsSanity, cmdSanity, opt);
-        	if (!ansSanity.satisfiable()) {
-        		throw new RuntimeException("Problem unsat with original bounds.");
-        	}
+            ArrayList<Sig> sigsSanity = new ArrayList<>(sigs);
+            Command cmdSanity = addBounds(cmd, lower, upper, sigsSanity);
+            A4Solution ansSanity = TranslateAlloyToKodkod.execute_command(rep, sigsSanity, cmdSanity, opt);
+            if (!ansSanity.satisfiable()) {
+                throw new RuntimeException("Problem unsat with original bounds.");
+            }
         }
 
         boolean rerun = true;
         DdminAbsInstBounds min;
         while (rerun) {
             rerun = false;
-            
+
             min = new DdminAbsInstBounds(false);
             List<BoundElement> newUpper = min.minimize(upper);
             if (upper.size() > newUpper.size()) {
-            	rerun = true;
-            	upper = newUpper;
+                rerun = true;
+                upper = newUpper;
             }
 
             min = new DdminAbsInstBounds(true);
             List<BoundElement> newLower = min.minimize(lower);
             if (lower.size() > newLower.size()) {
-            	rerun = true;
-            	lower = newLower;
+                rerun = true;
+                lower = newLower;
             } else {
                 // no change in lower; this means upper is still valid
                 rerun = false;
@@ -322,7 +363,7 @@ public class Minimizer {
                 boolean sigMissingAndTupleInvalid = false;
                 for (int i = 0; i < e.t.arity(); i++) {
                     Expr s = retrieveAtomExpr(e.t.atom(i), true);
-                	if (tuple == null) {
+                    if (tuple == null) {
                         tuple = s;
                     } else {
                         tuple = tuple.product(s);
@@ -402,46 +443,46 @@ public class Minimizer {
                     upperBound = upperBound.and(bound);
                 }
             } else {
-            	Expr atMost = null;
-            	// find instance elements for field (from upper bound)
-            	for (BoundElement ei : instance) {
-            		if (ei.f == e.f) {
-            			Expr tuple = null;
-            			for (int i=0; i < ei.t.arity(); i++) {
-            				// TODO construct tuple based on atoms
-            				String atomName = ei.t.atom(i);
-            				// check if one atom is used
-            				Expr atom = oneSig.get(atomName);            
-            				// atom not found in sigs or one sig not included
-            				if (atom == null || !cmdSigs.contains(atom)) {
-            					atom = retrieveAtomExpr(atomName, false);
-            				}
-            				// add lone sig if needed 
-            				if (atom instanceof PrimSig) {
-            					if (!cmdSigs.contains((Sig) atom)) {
-            						cmdSigs.add((Sig) atom);
-            					}
-            				}
-            				if (tuple == null) {
-            					tuple = atom;
-            				} else {
-            					tuple = tuple.product(atom);
-            				}
-            			}
-            			if (atMost == null) {
-            				atMost = tuple;
-            			} else {
-            				atMost = atMost.plus(tuple);
-            			}
-            		}
-            		
-            	}
-            	Expr bound = null;
-            	if (atMost == null) {
-            		bound = e.f.no();
-            	} else {
-            		bound = e.f.in(atMost);
-            	}
+                Expr atMost = null;
+                // find instance elements for field (from upper bound)
+                for (BoundElement ei : instance) {
+                    if (ei.f == e.f) {
+                        Expr tuple = null;
+                        for (int i = 0; i < ei.t.arity(); i++) {
+                            // TODO construct tuple based on atoms
+                            String atomName = ei.t.atom(i);
+                            // check if one atom is used
+                            Expr atom = oneSig.get(atomName);
+                            // atom not found in sigs or one sig not included
+                            if (atom == null || !cmdSigs.contains(atom)) {
+                                atom = retrieveAtomExpr(atomName, false);
+                            }
+                            // add lone sig if needed
+                            if (atom instanceof PrimSig) {
+                                if (!cmdSigs.contains(atom)) {
+                                    cmdSigs.add((Sig) atom);
+                                }
+                            }
+                            if (tuple == null) {
+                                tuple = atom;
+                            } else {
+                                tuple = tuple.product(atom);
+                            }
+                        }
+                        if (atMost == null) {
+                            atMost = tuple;
+                        } else {
+                            atMost = atMost.plus(tuple);
+                        }
+                    }
+
+                }
+                Expr bound = null;
+                if (atMost == null) {
+                    bound = e.f.no();
+                } else {
+                    bound = e.f.in(atMost);
+                }
                 if (upperBound == null) {
                     upperBound = bound;
                 } else {
@@ -465,32 +506,32 @@ public class Minimizer {
     }
 
     /**
-     * retrieves an expression for the given atom 
-     * 
+     * retrieves an expression for the given atom
+     *
      * this can be a signature or a constant, e.g., integer
-     * 
+     *
      * @param atom
      * @param useOneSig in case of signatures use one (lone if false)
      * @return
      */
     private Expr retrieveAtomExpr(String atom, boolean useOneSig) {
-		Expr e = null;
-    	if (useOneSig) {
-			e = oneSig.get(atom);
-		} else {
-			e = loneSig.get(atom);
-		}
-    	if (e == null) {
-    		try {
-    			int i = Integer.parseInt(atom);
-    			e = ExprConstant.makeNUMBER(i);
-			} catch (Exception e2) {
-			}
-    	}
-		return e;
-	}
+        Expr e = null;
+        if (useOneSig) {
+            e = oneSig.get(atom);
+        } else {
+            e = loneSig.get(atom);
+        }
+        if (e == null) {
+            try {
+                int i = Integer.parseInt(atom);
+                e = ExprConstant.makeNUMBER(i);
+            } catch (Exception e2) {
+            }
+        }
+        return e;
+    }
 
-	private List<BoundElement> atomsOf(List<BoundElement> l) {
+    private List<BoundElement> atomsOf(List<BoundElement> l) {
         return l.stream().filter(p -> p.isAtom()).collect(Collectors.toList());
     }
 
@@ -511,5 +552,3 @@ public class Minimizer {
         return this.upper;
     }
 }
-
-

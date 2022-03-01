@@ -15,7 +15,7 @@ public class MinimizerUtil {
 		options.solver = A4Options.SatSolver.SAT4J;
 
 		Minimizer m = new Minimizer();
-		m.minimize(world.getAllReachableSigs(), command, options);
+		m.minimize(world.getAllReachableSigs(), world.getAllReachableFacts(), command, options);
 
 		return m;
 	}
