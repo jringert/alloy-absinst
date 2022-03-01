@@ -11,7 +11,7 @@ public class MinimizerTest {
     @Test
     public void testAddrBook1aRun() {
         String module = "../org.alloytools.alloy.extra/extra/models/book/chapter2/addressBook1a.als";
-        
+
         int cmdNum = 0;
 
         Minimizer m = MinimizerUtil.testMin(module, cmdNum);
@@ -36,13 +36,13 @@ public class MinimizerTest {
     @Test
     public void testAddrBook3cCheck3() {
         String module = "../org.alloytools.alloy.extra/extra/models/book/chapter2/addressBook3c.als";
-        int cmdNum = 4;
+        int cmdNum = 3;
 
         Minimizer m = MinimizerUtil.testMin(module, cmdNum);
 
 
-        assertTrue(!m.getLowerBound().isEmpty());
-        assertTrue(m.getUpperBound().isEmpty());
+        assertEquals("[Alias$0, Alias$1, Book$3, Book$3->Alias$1->Alias$0]", m.getLowerBound().toString());
+        assertEquals("[UB for field (this/Book <: names)]", m.getUpperBound().toString());
     }
 
 
