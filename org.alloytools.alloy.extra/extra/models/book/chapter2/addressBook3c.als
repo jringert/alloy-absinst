@@ -79,6 +79,3 @@ assert lookupYields {
 
 // This shows a counterexample similar to Fig 2.17
 check lookupYields for 3 but 4 Book
-
-// JOR added this conversion of the check to a run command
-run {not (all b: Book, n: b.names | some lookup [b,n])} for 3 but 4 Book
