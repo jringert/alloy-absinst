@@ -1,0 +1,38 @@
+<?xml version="1.0"?>
+<alloy>
+
+<view>
+
+<defaultnode color="Gray"/>
+
+<defaultedge color="Gray"/>
+
+<node>
+   <type name="Addr"/>
+   <type name="Alias"/>
+   <type name="Book"/>
+   <type name="Group"/>
+   <type name="Int"/>
+   <type name="Name"/>
+   <type name="String"/>
+   <type name="Target"/>
+   <type name="univ"/>
+   <type name="BookOrder/Ord"/>
+   <type name="seq/Int"/>
+</node>
+
+<node color="Yellow" label="$LB">
+   <set name="$LB" type="Name"/>
+</node>
+
+<node color="Yellow" label="$LB">
+   <set name="$LB$" type="Book"/>
+</node>
+
+<edge color="Black" label="($LB) addr">
+   <relation name="$LB addr"> <type name="Book"/> <type name="Name"/> <type name="Target"/> </relation>
+</edge>
+
+</view>
+
+</alloy>

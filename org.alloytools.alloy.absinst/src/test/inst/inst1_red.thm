@@ -1,0 +1,32 @@
+<?xml version="1.0"?>
+<alloy>
+
+<view>
+
+<defaultnode/>
+
+<defaultedge/>
+
+<node>
+   <type name="Addr"/>
+   <type name="Alias"/>
+   <type name="Book"/>
+   <type name="Group"/>
+   <type name="Int"/>
+   <type name="Name"/>
+   <type name="String"/>
+   <type name="Target"/>
+   <type name="univ"/>
+   <type name="BookOrder/Ord"/>
+   <type name="seq/Int"/>
+   <set name="$lookupYields_b" type="Book"/>
+   <set name="$lookupYields_n&apos;" type="Name"/>
+</node>
+
+<node color="Red">
+   <set name="$AbsInst" type="Name"/>
+</node>
+
+</view>
+
+</alloy>
