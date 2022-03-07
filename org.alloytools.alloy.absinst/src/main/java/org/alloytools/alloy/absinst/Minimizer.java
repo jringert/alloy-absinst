@@ -551,4 +551,13 @@ public class Minimizer {
     public List<BoundElement> getUpperBound() {
         return this.upper;
     }
+
+    public ConstList<Sig> getSigsOrig() {
+        return sigsOrig;
+    }
+
+    public Command getCmdOrig() {
+        return cmdOrig;
+    }
+
 }
