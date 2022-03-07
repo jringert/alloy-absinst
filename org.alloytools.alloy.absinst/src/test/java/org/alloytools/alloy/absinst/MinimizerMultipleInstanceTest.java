@@ -21,7 +21,7 @@ public class MinimizerMultipleInstanceTest {
 
     public static void main(String[] args) throws IOException {
         StringBuffer b = new StringBuffer();
-        Files.find(Paths.get("src/test/alloy/"), 999, (p, bfa) -> bfa.isRegularFile() && p.toString().endsWith(".als")).forEach(f -> b.append(f.toString() + "," + countInstances(f.toString()) + "\n"));
+        Files.find(Paths.get("../org.alloytools.alloy.extra/extra/models/book/chapter2/"), 999, (p, bfa) -> bfa.isRegularFile() && p.toString().endsWith(".als")).forEach(f -> b.append(f.toString() + "," + countInstances(f.toString()) + "\n"));
         System.out.println(b);
     }
 
