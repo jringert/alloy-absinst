@@ -1,0 +1,76 @@
+
+<?xml version="1.0"?>
+
+<alloy>
+
+<view>
+
+<defaultnode color="Gray"/>
+
+<defaultedge color="Gray"/>
+
+<node>
+   <type name="univ"/>
+   <type name="Int"/>
+   <type name="seq/Int"/>
+   <type name="String"/>
+   <type name="Student"/>
+   <type name="Student$0"/>
+   <type name="Student$0"/>
+   <type name="Student$1"/>
+   <type name="Student$1"/>
+   <type name="Professor"/>
+   <type name="Professor$0"/>
+   <type name="Professor$0"/>
+   <type name="Person"/>
+   <type name="Student"/>
+   <type name="Professor"/>
+   <type name="Class"/>
+   <type name="Class$0"/>
+   <type name="Class$0"/>
+   <type name="Class$1"/>
+   <type name="Class$1"/>
+   <type name="Assignment"/>
+   <type name="Assignment$0"/>
+   <type name="Assignment$0"/>
+   <type name="Assignment$1"/>
+   <type name="Assignment$1"/>
+   <type name="Assignment$2"/>
+   <type name="Assignment$2"/>
+
+</node>
+
+<node color ="Yellow" label="$LB">
+   <set name="$LB Student$1" type="Student"/>
+</node>
+
+<node color ="Yellow" label="$LB">
+   <set name="$LB Assignment$2" type="Assignment"/>
+</node>
+
+<node color ="Yellow" label="$LB">
+   <set name="$LB Class$0" type="Class"/>
+</node>
+
+<node color ="Yellow" label="$LB">
+   <set name="$LB Student$0" type="Student"/>
+</node>
+
+<edge color ="Black" label="$LB Assignment$2->Class$0">
+   <relation name="$LB Assignment$2->Class$0"> <type name="Assignment"/> <type name="Class"/> </relation>
+
+</edge>
+
+<edge color ="Black" label="$LB Class$0->Student$1">
+   <relation name="$LB Class$0->Student$1"> <type name="Class"/> <type name="Student"/> </relation>
+
+</edge>
+
+<edge color ="Black" label="$LB Class$0->Student$0">
+   <relation name="$LB Class$0->Student$0"> <type name="Class"/> <type name="Student"/> </relation>
+
+</edge>
+
+</view>
+
+</alloy>
