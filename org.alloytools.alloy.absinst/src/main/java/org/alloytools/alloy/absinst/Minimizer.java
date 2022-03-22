@@ -357,7 +357,7 @@ public class Minimizer {
         return true;
     }
 
-    public Command addBoundsSigs(Command cmd, List<BoundElement> lower, List<BoundElement> upper, List<Sig> cmdSigs) {
+    public Command addBounds(Command cmd, List<BoundElement> lower, List<BoundElement> upper, List<Sig> cmdSigs) {
         Expr lowerBound = null;
         Expr upperBound = null;
 
@@ -523,7 +523,7 @@ public class Minimizer {
      * @param cmdSigs
      * @return
      */
-    public Command addBounds(Command cmd, List<BoundElement> lower, List<BoundElement> upper, List<Sig> cmdSigs) {
+    public Command addBoundsPred(Command cmd, List<BoundElement> lower, List<BoundElement> upper, List<Sig> cmdSigs) {
         Expr lowerBound = null;
         Expr upperBound = null;
 
