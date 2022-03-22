@@ -1,0 +1,68 @@
+<alloy builddate="1970-01-01T00:00:00Z">
+
+<instance bitwidth="4" maxseq="4" mintrace="-1" maxtrace="-1" command="Run run$1" filename="" tracelength="1" backloop="0">
+
+<sig label="seq/Int" ID="0" parentID="1" builtin="yes">
+</sig>
+
+<sig label="Int" ID="1" parentID="2" builtin="yes">
+</sig>
+
+<sig label="String" ID="3" parentID="2" builtin="yes">
+</sig>
+
+<sig label="List$0" ID="4" parentID="5" one="yes">
+</sig>
+
+<sig label="List$0" ID="6" parentID="5" lone="yes">
+</sig>
+
+<sig label="this/List" ID="5" parentID="2" one="yes">
+   <atom label="List$0"/>
+</sig>
+
+<field label="header" ID="7" parentID="5">
+   <tuple> <atom label="List$0"/> <atom label="Node$0"/> </tuple>
+   <types> <type ID="5"/> <type ID="8"/> </types>
+</field>
+
+<sig label="Node$0" ID="9" parentID="8" one="yes">
+</sig>
+
+<sig label="Node$0" ID="10" parentID="8" lone="yes">
+</sig>
+
+<sig label="this/Node" ID="8" parentID="2">
+   <atom label="Node$0"/>
+</sig>
+
+<field label="elem" ID="11" parentID="8">
+   <tuple> <atom label="Node$0"/> <atom label="-1"/> </tuple>
+   <types> <type ID="8"/> <type ID="1"/> </types>
+</field>
+
+<field label="link" ID="12" parentID="8">
+   <types> <type ID="8"/> <type ID="8"/> </types>
+</field>
+
+<sig label="univ" ID="2" builtin="yes" var="yes">
+</sig>
+
+<skolem label="$Acyclic_n" ID="13">
+   <tuple> <atom label="Node$0"/> </tuple>
+   <types> <type ID="2"/> </types>
+</skolem>
+
+<skolem label="$LB Node$0" ID="m0">
+   <tuple> <atom label="Node$0"/> </tuple>
+   <types> <type ID="8"/> </types>
+</skolem>
+
+<skolem label="$LB Node$0->Node$0" ID="m1">
+   <tuple> <atom label="Node$0"/> <atom label="Node$0"/> </tuple>
+   <types> <type ID="8"/> <type ID="8"/> </types>
+</skolem>
+
+</instance>
+
+</alloy>

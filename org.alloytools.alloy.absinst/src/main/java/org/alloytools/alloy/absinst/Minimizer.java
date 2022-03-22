@@ -2,6 +2,7 @@ package org.alloytools.alloy.absinst;
 
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
@@ -77,6 +78,8 @@ public class Minimizer {
     protected Map<String,BoundElement> boundElem4Atom = new LinkedHashMap<>();
     protected Map<String,PrimSig>      oneSig         = new LinkedHashMap<>();
     protected Map<String,PrimSig>      loneSig        = new LinkedHashMap<>();
+
+    private A4Solution                 instOrig;
 
     protected class BoundElement {
 
@@ -221,6 +224,7 @@ public class Minimizer {
         this.cmdOrig = cmd;
         this.optOrig = opt;
         A4Solution ans = TranslateAlloyToKodkod.execute_command(rep, sigs, cmd, opt);
+        instOrig = ans;
 
         initBounds(ans);
 
@@ -762,4 +766,44 @@ public class Minimizer {
         return cmdOrig;
     }
 
+    public A4Solution getInstOrig() {
+        return instOrig;
+    }
+
+    public HashMap<A4Tuple,String> getLowerBoundOriginMap() {
+        HashMap<A4Tuple,String> map = new HashMap<A4Tuple,String>();
+        for (BoundElement lb : getLowerBound()) {
+            if (lb.s != null)
+                map.put(lb.t, lb.s.toString());
+            else
+                map.put(lb.t, lb.f.toString());
+        }
+        return map;
+    }
+
+    public HashMap<A4Tuple,Sig> getLowerBoundSigs() {
+        HashMap<A4Tuple,Sig> map = new HashMap<A4Tuple,Sig>();
+        for (BoundElement lb : getLowerBound()) {
+            if (lb.s != null)
+                map.put(lb.t, lb.s);
+        }
+        return map;
+    }
+
+    public HashMap<A4Tuple,Field> getLowerBoundFields() {
+        HashMap<A4Tuple,Field> map = new HashMap<A4Tuple,Field>();
+        for (BoundElement lb : getLowerBound()) {
+            if (lb.f != null)
+                map.put(lb.t, lb.f);
+        }
+        return map;
+    }
+
+    public ArrayList<String> getUpperBoundNames() {
+        ArrayList<String> names = new ArrayList<String>();
+        for (BoundElement ub : getUpperBound()) {
+            names.add(ub.toString());
+        }
+        return names;
+    }
 }

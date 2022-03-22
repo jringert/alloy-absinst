@@ -19,11 +19,10 @@ import edu.mit.csail.sdg.translator.A4Options;
 import edu.mit.csail.sdg.translator.A4Solution;
 import edu.mit.csail.sdg.translator.A4Tuple;
 
-public class AbsInstVisualizer {
+public class GradeViz {
 
-    //This class can be removed, used to explore implementation of AbsWriter
     public static void main(String[] args) throws FileNotFoundException, UnsupportedEncodingException {
-        String module = args[0];
+        String module = "src/test/alloy/small_models/gradeFaulty.als";
 
         int cmdNum = 0;
 
@@ -39,7 +38,7 @@ public class AbsInstVisualizer {
         HashMap<A4Tuple,String> lower = m.getLowerBoundOriginMap();
         ArrayList<String> upper = m.getUpperBoundNames();
 
-        PrintWriter out = new PrintWriter("test.xml", "UTF-8");
+        PrintWriter out = new PrintWriter(System.getProperty("user.dir") + "/src/test/inst/grade.xml", "UTF-8");
         A4Reporter rep = new A4Reporter() {
 
             @Override
@@ -52,7 +51,6 @@ public class AbsInstVisualizer {
         if (out.checkError())
             throw new ErrorFatal("Error writing the solution XML file.");
 
-        VizGUI viz = new VizGUI(false, "src/test/inst/inst1.xml", null);
-        viz.loadThemeFile("src/test/inst/inst1_greyYellow.thm");
+        VizGUI viz = new VizGUI(false, System.getProperty("user.dir") + "/src/test/inst/grade.xml", null);
     }
 }
