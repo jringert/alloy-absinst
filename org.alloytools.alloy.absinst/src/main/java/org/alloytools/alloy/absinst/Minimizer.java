@@ -1,6 +1,7 @@
 package org.alloytools.alloy.absinst;
 
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
@@ -9,11 +10,15 @@ import java.util.stream.Collectors;
 import edu.mit.csail.sdg.alloy4.A4Reporter;
 import edu.mit.csail.sdg.alloy4.ConstList;
 import edu.mit.csail.sdg.alloy4.ErrorWarning;
+import edu.mit.csail.sdg.alloy4.Pos;
 import edu.mit.csail.sdg.ast.Attr;
 import edu.mit.csail.sdg.ast.Command;
+import edu.mit.csail.sdg.ast.Decl;
 import edu.mit.csail.sdg.ast.Expr;
 import edu.mit.csail.sdg.ast.ExprConstant;
 import edu.mit.csail.sdg.ast.ExprList;
+import edu.mit.csail.sdg.ast.ExprQt;
+import edu.mit.csail.sdg.ast.ExprVar;
 import edu.mit.csail.sdg.ast.Module;
 import edu.mit.csail.sdg.ast.Sig;
 import edu.mit.csail.sdg.ast.Sig.Field;
@@ -348,7 +353,7 @@ public class Minimizer {
         return true;
     }
 
-    public Command addBounds(Command cmd, List<BoundElement> lower, List<BoundElement> upper, List<Sig> cmdSigs) {
+    public Command addBoundsSigs(Command cmd, List<BoundElement> lower, List<BoundElement> upper, List<Sig> cmdSigs) {
         Expr lowerBound = null;
         Expr upperBound = null;
 
@@ -506,6 +511,199 @@ public class Minimizer {
     }
 
     /**
+     * adds bounds as a predicate only (does not add any signatures to cmdSigs)
+     *
+     * @param cmd
+     * @param lower
+     * @param upper
+     * @param cmdSigs
+     * @return
+     */
+    public Command addBounds(Command cmd, List<BoundElement> lower, List<BoundElement> upper, List<Sig> cmdSigs) {
+        Expr lowerBound = null;
+        Expr upperBound = null;
+
+        lowerBound = lowerBoundsPred(lower, lowerBound);
+
+        // upper bounds put a restriction on max from the instance
+        for (BoundElement e : upper) {
+            if (e.s != null) {
+                // we need to bound the signature to the upper bound of the instance
+                Expr atMost = null;
+                for (BoundElement ie : instance) {
+                    // only care about this signature
+                    if (ie.s == e.s && instanceOf(ie, e.s)) {
+                        PrimSig s = oneSig.get(ie.atomName());
+                        if (!cmdSigs.contains(s)) {
+                            // switch to the lone version for upper bound
+                            s = loneSig.get(ie.atomName());
+                            cmdSigs.add(s);
+                        }
+                        if (atMost == null) {
+                            atMost = s;
+                        } else {
+                            atMost = atMost.plus(s);
+                        }
+                    }
+                }
+                // collect union of subsignatures of s
+                Expr subs = null;
+                for (Sig ch : sigsOrig) {
+                    if (ch instanceof PrimSig) {
+                        PrimSig pch = (PrimSig) ch;
+                        if (pch.parent == e.s) {
+                            // no need to look for further children as inheritance takes care of that
+                            if (subs == null) {
+                                subs = pch;
+                            } else {
+                                subs = subs.plus(pch);
+                            }
+                        }
+                    }
+                }
+
+                Expr bound = null;
+                // there might not have been an atom in the instance so upper bound is empty set
+                if (atMost == null && subs == null) {
+                    // e.s doesn't have sub signatures and there is no atom for e.s
+                    // we set s = {}
+                    bound = e.s.no();
+                } else if (atMost == null) {
+                    // there is no atom in e.s, but maybe in its subsigs
+                    // we set s = children of s
+                    bound = e.s.equal(subs);
+                } else {
+                    // we set s in (atoms + children sigs)
+                    bound = e.s.in(atMost.plus(subs));
+                }
+                if (upperBound == null) {
+                    upperBound = bound;
+                } else {
+                    upperBound = upperBound.and(bound);
+                }
+            } else {
+                Expr atMost = null;
+                // find instance elements for field (from upper bound)
+                for (BoundElement ei : instance) {
+                    if (ei.f == e.f) {
+                        Expr tuple = null;
+                        for (int i = 0; i < ei.t.arity(); i++) {
+                            // TODO construct tuple based on atoms
+                            String atomName = ei.t.atom(i);
+                            // check if one atom is used
+                            Expr atom = oneSig.get(atomName);
+                            // atom not found in sigs or one sig not included
+                            if (atom == null || !cmdSigs.contains(atom)) {
+                                atom = retrieveAtomExpr(atomName, false);
+                            }
+                            // add lone sig if needed
+                            if (atom instanceof PrimSig) {
+                                if (!cmdSigs.contains(atom)) {
+                                    cmdSigs.add((Sig) atom);
+                                }
+                            }
+                            if (tuple == null) {
+                                tuple = atom;
+                            } else {
+                                tuple = tuple.product(atom);
+                            }
+                        }
+                        if (atMost == null) {
+                            atMost = tuple;
+                        } else {
+                            atMost = atMost.plus(tuple);
+                        }
+                    }
+
+                }
+                Expr bound = null;
+                if (atMost == null) {
+                    bound = e.f.no();
+                } else {
+                    bound = e.f.in(atMost);
+                }
+                if (upperBound == null) {
+                    upperBound = bound;
+                } else {
+                    upperBound = upperBound.and(bound);
+                }
+            }
+        }
+
+        Expr f = cmd.formula;
+        if (lowerBound != null) {
+            f = f.and(lowerBound);
+        }
+        System.out.println("LB for check: " + lowerBound);
+        if (upperBound != null) {
+            f = f.and(upperBound);
+        }
+        System.out.println("UB for check: " + upperBound);
+        return cmd.change(f);
+    }
+
+    private Expr lowerBoundsPred(List<BoundElement> lower, Expr lowerBound) {
+        Map<String,ExprVar> vars = new LinkedHashMap<>();
+
+        // add constraints for atoms to be in sigs
+        for (BoundElement e : lower) {
+            if (e.isAtom()) {
+                ExprVar v = ExprVar.make(null, e.atomName(), Sig.UNIV.type());
+                vars.put(e.atomName(), v);
+                Expr bound = v.in(e.s);
+                if (lowerBound == null) {
+                    lowerBound = bound;
+                } else {
+                    lowerBound = lowerBound.and(bound);
+                }
+            }
+        }
+
+        if (vars.isEmpty()) {
+            return ExprConstant.TRUE;
+        }
+
+        // add constraints for fields
+        for (BoundElement e : lower) {
+            if (!e.isAtom()) {
+                // fields added as constraints
+                Expr tuple = null;
+                boolean sigMissingAndTupleInvalid = false;
+                for (int i = 0; i < e.t.arity(); i++) {
+                    String atom = e.t.atom(i);
+                    Expr s = vars.get(atom);
+                    if (s == null) {
+                        s = retrieveAtomExpr(atom, true);
+                    }
+                    if (tuple == null) {
+                        tuple = s;
+                    } else {
+                        tuple = tuple.product(s);
+                    }
+                    // reject tuple if sig is missing
+                    if (!hasAtom(lower, e.t.atom(i))) {
+                        sigMissingAndTupleInvalid = true;
+                        // stop handling this tuple (inner loop)
+                        break;
+                    }
+                }
+                if (!sigMissingAndTupleInvalid) {
+                    Expr bound = tuple.in(e.f);
+                    if (lowerBound == null) {
+                        lowerBound = bound;
+                    } else {
+                        lowerBound = lowerBound.and(bound);
+                    }
+                }
+            }
+        }
+
+        Decl decl = new Decl(null, new Pos("disjoint", 0, 0), null, null, new ArrayList<>(vars.values()), Sig.UNIV.oneOf());
+        lowerBound = ExprQt.Op.SOME.make(null, null, Arrays.asList(decl), lowerBound);
+        return lowerBound;
+    }
+
+    /**
      * retrieves an expression for the given atom
      *
      * this can be a signature or a constant, e.g., integer
@@ -536,6 +734,10 @@ public class Minimizer {
     }
 
     private boolean hasAtom(List<BoundElement> bound, String atom) {
+        // if it is not a signature it is always present
+        if (!(retrieveAtomExpr(atom, true) instanceof PrimSig)) {
+            return true;
+        }
         for (BoundElement be : bound) {
             if (atom.equals(be.atomName())) {
                 return true;
