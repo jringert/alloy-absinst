@@ -41,11 +41,7 @@
 </node>
 
 <node color ="Yellow" label="$LB">
-   <set name="$LB Student$1" type="Student"/>
-</node>
-
-<node color ="Yellow" label="$LB">
-   <set name="$LB Assignment$2" type="Assignment"/>
+   <set name="$LB Student$0" type="Student"/>
 </node>
 
 <node color ="Yellow" label="$LB">
@@ -53,7 +49,11 @@
 </node>
 
 <node color ="Yellow" label="$LB">
-   <set name="$LB Student$0" type="Student"/>
+   <set name="$LB Student$1" type="Student"/>
+</node>
+
+<node color ="Yellow" label="$LB">
+   <set name="$LB Assignment$2" type="Assignment"/>
 </node>
 
 <edge color ="Black" label="$LB Assignment$2->Class$0">

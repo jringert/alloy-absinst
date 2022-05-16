@@ -54,9 +54,11 @@ public class CycleVizInst {
         AbstWriterWithInstance.writeInstance(rep, instance, out, null, null, lower, upper);
         if (out.checkError())
             throw new ErrorFatal("Error writing the solution XML file.");
+        out.close();
 
         PrintWriter out_theme = new PrintWriter(System.getProperty("user.dir") + "/src/test/inst/cycleWInst.thm");
         AbstWriterWithInstance.writeTheme(instance, out_theme, lowerSig, lowerField);
+        out_theme.close();
 
         //This hangs
         //This also seems to have some state issues where the first time I run it, it does not load the theme in or update once loading the theme in

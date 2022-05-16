@@ -118,19 +118,19 @@
    <types> <type ID="21"/> </types>
 </skolem>
 
-<skolem label="$LB Student$1" ID="m0">
-   <tuple> <atom label="Student$1"/> </tuple>
+<skolem label="$LB Student$0" ID="m0">
+   <tuple> <atom label="Student$0"/> </tuple>
    <types> <type ID="5"/> </types>
 </skolem>
 
-<skolem label="$LB Assignment$2" ID="m1">
-   <tuple> <atom label="Assignment$2"/> </tuple>
-   <types> <type ID="21"/> </types>
-</skolem>
-
-<skolem label="$LB Class$0" ID="m2">
+<skolem label="$LB Class$0" ID="m1">
    <tuple> <atom label="Class$0"/> </tuple>
    <types> <type ID="14"/> </types>
+</skolem>
+
+<skolem label="$LB Student$1" ID="m2">
+   <tuple> <atom label="Student$1"/> </tuple>
+   <types> <type ID="5"/> </types>
 </skolem>
 
 <skolem label="$LB Assignment$2->Class$0" ID="m3">
@@ -148,9 +148,9 @@
    <types> <type ID="14"/> <type ID="5"/> </types>
 </skolem>
 
-<skolem label="$LB Student$0" ID="m6">
-   <tuple> <atom label="Student$0"/> </tuple>
-   <types> <type ID="5"/> </types>
+<skolem label="$LB Assignment$2" ID="m6">
+   <tuple> <atom label="Assignment$2"/> </tuple>
+   <types> <type ID="21"/> </types>
 </skolem>
 
 </instance>
