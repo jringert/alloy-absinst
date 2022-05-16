@@ -219,6 +219,10 @@ public class Minimizer {
     }
 
     public void minimize(ConstList<Sig> sigs, Expr facts, Command cmd, A4Options opt) {
+        minimize(sigs, facts, cmd, opt, UBKind.INSTANCE_OR_NO_UPPER);
+    }
+
+    public void minimize(ConstList<Sig> sigs, Expr facts, Command cmd, A4Options opt, UBKind ub) {
         this.sigsOrig = sigs;
         this.factsOrig = facts;
         this.cmdOrig = cmd;
@@ -226,13 +230,16 @@ public class Minimizer {
         A4Solution ans = TranslateAlloyToKodkod.execute_command(rep, sigs, cmd, opt);
         instOrig = ans;
 
-        initBounds(ans);
+        initBounds(ans, ub);
 
         {
             ArrayList<Sig> sigsSanity = new ArrayList<>(sigs);
             Command cmdSanity = addBounds(cmd, lower, upper, sigsSanity);
             A4Solution ansSanity = TranslateAlloyToKodkod.execute_command(rep, sigsSanity, cmdSanity, opt);
             if (!ansSanity.satisfiable()) {
+                if (UBKind.NO_UPPER.equals(ub)) {
+                    throw new RuntimeException("Problem unsat with original bounds, maybe due to ignoring any UB.");
+                }
                 throw new RuntimeException("Problem unsat with original bounds.");
             }
         }
@@ -269,7 +276,7 @@ public class Minimizer {
      *
      * @param ans
      */
-    private void initBounds(A4Solution ans) {
+    private void initBounds(A4Solution ans, UBKind ub) {
         // lower bounds are exact tuples
         for (Sig s : ans.getAllReachableSigs()) {
             if (isRelevant(s)) {
@@ -305,20 +312,25 @@ public class Minimizer {
         // copy lower bounds as instance
         instance.addAll(lower);
 
-        // upper bounds are either fixed to instance or open
-        for (Sig s : ans.getAllReachableSigs()) {
-            if (isRelevant(s)) {
-                BoundElement es = new BoundElement();
-                es.s = s;
-                upper.add(es);
-                for (Field f : s.getFields()) {
-                    BoundElement ef = new BoundElement();
-                    ef.f = f;
-                    upper.add(ef);
+        if (UBKind.INSTANCE_OR_NO_UPPER.equals(ub) || UBKind.INSTANCE.equals(ub)) {
+            // upper bounds are either fixed to instance or open
+            for (Sig s : ans.getAllReachableSigs()) {
+                if (isRelevant(s)) {
+                    BoundElement es = new BoundElement();
+                    es.s = s;
+                    upper.add(es);
+                    for (Field f : s.getFields()) {
+                        BoundElement ef = new BoundElement();
+                        ef.f = f;
+                        upper.add(ef);
+                    }
                 }
             }
+        } else if (UBKind.NO_UPPER.equals(ub)) {
+            upper.clear(); // not really necessary, more of a symbolic act
+        } else if (UBKind.EXACT.equals(ub)) {
+            // TODO build the whole UB with individual atoms etc.
         }
-
     }
 
     /**
@@ -521,7 +533,7 @@ public class Minimizer {
      * @param lower
      * @param upper
      * @param cmdSigs
-     * @return
+     * @return a command with bounds added to run predicate
      */
     public Command addBoundsPred(Command cmd, List<BoundElement> lower, List<BoundElement> upper, List<Sig> cmdSigs) {
         Expr lowerBound = null;
