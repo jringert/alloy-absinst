@@ -233,27 +233,39 @@ public class Minimizer {
         initBounds(ans, ub);
 
         {
+            // sanity check that within given bounds we have some valid instance
             ArrayList<Sig> sigsSanity = new ArrayList<>(sigs);
             Command cmdSanity = addBounds(cmd, lower, upper, sigsSanity);
             A4Solution ansSanity = TranslateAlloyToKodkod.execute_command(rep, sigsSanity, cmdSanity, opt);
             if (!ansSanity.satisfiable()) {
-                if (UBKind.NO_UPPER.equals(ub)) {
-                    throw new RuntimeException("Problem unsat with original bounds, maybe due to ignoring any UB.");
-                }
                 throw new RuntimeException("Problem unsat with original bounds.");
             }
         }
+        {
+            // the above is currently also covered by the below but it might be removed for performance considerations
+
+            // sanity check that within given bounds we DON'T have any invalid instance
+            DdminAbsInstBounds ddmin = new DdminAbsInstBounds(false);
+            boolean check = ddmin.check(upper); // all instances in bounds satisfy command
+            if (!check) {
+                throw new RuntimeException("Instances in initial bounds that violate the command (maybe UB kind is NO_UPPER?).");
+            }
+        }
+
 
         boolean rerun = true;
         DdminAbsInstBounds min;
         while (rerun) {
             rerun = false;
 
-            min = new DdminAbsInstBounds(false);
-            List<BoundElement> newUpper = min.minimize(upper);
-            if (upper.size() > newUpper.size()) {
-                rerun = true;
-                upper = newUpper;
+            // don't minimize exact or empty bounds
+            if (!UBKind.INSTANCE.equals(ub) && !UBKind.NO_UPPER.equals(ub)) {
+                min = new DdminAbsInstBounds(false);
+                List<BoundElement> newUpper = min.minimize(upper);
+                if (upper.size() > newUpper.size()) {
+                    rerun = true;
+                    upper = newUpper;
+                }
             }
 
             min = new DdminAbsInstBounds(true);
