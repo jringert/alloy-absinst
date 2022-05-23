@@ -86,17 +86,27 @@ public class Minimizer {
         Field   f;
         Sig     s;
         A4Tuple t;
+        String  atomName;
 
         boolean isAtom() {
+            if (atomName != null) {
+                return true;
+            }
             return t.arity() == 1;
         }
 
         String atomName() {
+            if (atomName != null) {
+                return atomName;
+            }
             return t.atom(0);
         }
 
         @Override
         public String toString() {
+            if (atomName != null) {
+                return atomName;
+            }
             if (t != null) {
                 return t.toString();
             } else if (s != null) {
@@ -108,26 +118,32 @@ public class Minimizer {
 
     }
 
-    A4Reporter rep = new A4Reporter() {
+    private String boundMsg;
+    A4Reporter     rep = new A4Reporter() {
 
-        // For example, here we choose to display each "warning" by printing
-        // it to System.out
-        @Override
-        public void warning(ErrorWarning msg) {
-            System.out.print("Relevance Warning:\n" + (msg.toString().trim()) + "\n\n");
-            System.out.flush();
-        }
 
-        // @Override
-        // public void bound(String msg) {
-        // System.out.println(msg);
-        // }
+                           // For example, here we choose to display each "warning" by printing
+                           // it to System.out
+                           @Override
+                           public void warning(ErrorWarning msg) {
+                               System.out.print("Relevance Warning:\n" + (msg.toString().trim()) + "\n\n");
+                               System.out.flush();
+                           }
 
-        // @Override
-        // public void scope(String msg) {
-        // System.out.println(msg);
-        // }
-    };
+                           @Override
+                           public void bound(String msg) {
+                               if (boundMsg.isBlank()) {
+                                   boundMsg = msg;
+                               } else {
+                                   boundMsg += msg;
+                               }
+                           }
+
+                           //        @Override
+                           //        public void scope(String msg) {
+                           //            System.out.println(msg);
+                           //        }
+                       };
 
     public class DdminAbsInstBounds extends AbstractDdmin<BoundElement> {
 
@@ -227,6 +243,7 @@ public class Minimizer {
         this.factsOrig = facts;
         this.cmdOrig = cmd;
         this.optOrig = opt;
+        this.boundMsg = "";
         A4Solution ans = TranslateAlloyToKodkod.execute_command(rep, sigs, cmd, opt);
         instOrig = ans;
 
@@ -242,9 +259,8 @@ public class Minimizer {
             }
         }
         {
-            // the above is currently also covered by the below but it might be removed for performance considerations
-
             // sanity check that within given bounds we DON'T have any invalid instance
+            // TODO remove, but keep it where UB is of kind NO_UPPER
             DdminAbsInstBounds ddmin = new DdminAbsInstBounds(false);
             boolean check = ddmin.check(upper); // all instances in bounds satisfy command
             if (!check) {
@@ -258,7 +274,7 @@ public class Minimizer {
         while (rerun) {
             rerun = false;
 
-            // don't minimize exact or empty bounds
+            // don't minimize instance or empty bounds
             if (!UBKind.INSTANCE.equals(ub) && !UBKind.NO_UPPER.equals(ub)) {
                 min = new DdminAbsInstBounds(false);
                 List<BoundElement> newUpper = min.minimize(upper);
@@ -342,7 +358,45 @@ public class Minimizer {
             upper.clear(); // not really necessary, more of a symbolic act
         } else if (UBKind.EXACT.equals(ub)) {
             // TODO build the whole UB with individual atoms etc.
+            for (Sig s : ans.getAllReachableSigs()) {
+                if (isRelevant(s)) {
+                    for (String atom : getAtoms(s, boundMsg)) {
+                        if (instanceOf(atom, s)) {
+                            BoundElement es = new BoundElement();
+                            es.s = s;
+                            es.atomName = atom;
+                            upper.add(es);
+                            System.out.println(atom);
+                        }
+                    }
+                    for (Field f : s.getFields()) {
+                        BoundElement ef = new BoundElement();
+                        ef.f = f;
+                        upper.add(ef);
+                    }
+                }
+            }
         }
+    }
+
+    /**
+     * extracts atom names from the bounds message of the reporter
+     *
+     * @param s
+     * @param bound
+     * @return array of atom names that are the bound of the given signature
+     */
+    private String[] getAtoms(Sig s, String bound) {
+        for (String line : bound.split("\n")) {
+            String ini = "Sig " + s.label + " in ";
+            if (line.startsWith(ini)) {
+                line = line.substring(ini.length());
+                line = line.replaceAll("\\[", "");
+                line = line.replaceAll("\\]", "");
+                return line.split(", ");
+            }
+        }
+        throw new RuntimeException("Unable to retrieve atoms for " + s.label + " from bound: " + bound);
     }
 
     /**
@@ -354,7 +408,19 @@ public class Minimizer {
      * @return
      */
     private boolean instanceOf(BoundElement e, Sig s) {
-        return e.atomName().startsWith(s.label.replaceAll("this/", ""));
+        return instanceOf(e.atomName(), s);
+    }
+
+    /**
+     * check whether this atom is a direct instance of the signature (false if it is
+     * an instance of a sub-signature)
+     *
+     * @param e
+     * @param s
+     * @return
+     */
+    private boolean instanceOf(String atomName, Sig s) {
+        return atomName.startsWith(s.label.replaceAll("this/", "") + "$");
     }
 
     /**

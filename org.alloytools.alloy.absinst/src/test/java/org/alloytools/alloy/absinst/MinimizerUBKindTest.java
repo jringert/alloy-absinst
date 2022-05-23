@@ -32,6 +32,32 @@ public class MinimizerUBKindTest {
     }
 
     @Test
+    public void testOneARunExact() {
+        String module = "src/test/alloy/basic/oneA.als";
+
+        int cmdNum = 0;
+
+        Minimizer m = MinimizerUtil.testMin(module, cmdNum, UBKind.EXACT);
+
+        assertEquals("[A$0]", m.getLowerBound().toString());
+        assertEquals("[UB for this/A]", m.getUpperBound().toString());
+
+    }
+
+    @Test
+    public void testOneABSubRunExact() {
+        String module = "src/test/alloy/basic/oneABsub.als";
+
+        int cmdNum = 0;
+
+        Minimizer m = MinimizerUtil.testMin(module, cmdNum, UBKind.EXACT);
+
+        assertEquals("[A$0]", m.getLowerBound().toString());
+        assertEquals("[UB for this/B, UB for this/A]", m.getUpperBound().toString());
+
+    }
+
+    @Test
     public void testSomeARun() {
         String module = "src/test/alloy/basic/someA.als";
 
