@@ -229,7 +229,7 @@ public class Minimizer {
         options.solver = A4Options.SatSolver.SAT4J;
 
         Minimizer m = new Minimizer();
-        m.minimize(world.getAllReachableSigs(), world.getAllReachableFacts(), command, options);
+        m.minimize(world, command, options);
 
         printBounds(m);
     }
@@ -242,30 +242,29 @@ public class Minimizer {
     /**
      * minimization of bounds (uses legacy UBKind = INSTANCE_OR_NO_UPPER)
      *
-     * @param sigs
-     * @param facts
+     * @param world
      * @param cmd
      * @param opt
      */
-    public void minimize(ConstList<Sig> sigs, Expr facts, Command cmd, A4Options opt) {
-        minimize(sigs, facts, cmd, opt, UBKind.INSTANCE_OR_NO_UPPER);
+    public void minimize(Module world, Command cmd, A4Options opt) {
+        minimize(world, cmd, opt, UBKind.INSTANCE_OR_NO_UPPER);
     }
 
-    public void minimize(ConstList<Sig> sigs, Expr facts, Command cmd, A4Options opt, UBKind ub) {
-        this.sigsOrig = sigs;
-        this.factsOrig = facts;
+    public void minimize(Module world, Command cmd, A4Options opt, UBKind ub) {
+        this.sigsOrig = world.getAllReachableSigs();
+        this.factsOrig = world.getAllReachableFacts();
         this.cmdOrig = cmd;
         this.optOrig = opt;
         this.boundMsg = "";
         this.ubKind = ub;
-        A4Solution ans = TranslateAlloyToKodkod.execute_command(rep, sigs, cmd, opt);
+        A4Solution ans = TranslateAlloyToKodkod.execute_command(rep, this.sigsOrig, cmd, opt);
         instOrig = ans;
 
         initBounds(ans);
 
         {
             // sanity check that within given bounds we have some valid instance
-            ArrayList<Sig> sigsSanity = new ArrayList<>(sigs);
+            ArrayList<Sig> sigsSanity = new ArrayList<>(this.sigsOrig);
             Command cmdSanity = addBounds(cmd, lower, upper, sigsSanity);
             A4Solution ansSanity = TranslateAlloyToKodkod.execute_command(rep, sigsSanity, cmdSanity, opt);
             if (!ansSanity.satisfiable()) {
