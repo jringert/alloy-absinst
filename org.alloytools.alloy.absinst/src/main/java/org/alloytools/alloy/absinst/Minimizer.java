@@ -137,7 +137,7 @@ public class Minimizer {
 
                            @Override
                            public void bound(String msg) {
-                               if (boundMsg.isBlank()) {
+                               if (boundMsg == null || boundMsg.isBlank()) {
                                    boundMsg = msg;
                                } else {
                                    boundMsg += msg;
@@ -250,16 +250,35 @@ public class Minimizer {
         minimize(world, cmd, opt, UBKind.INSTANCE_OR_NO_UPPER);
     }
 
+    /**
+     * minimization of an instance (uses legacy UBKind = INSTANCE_OR_NO_UPPER)
+     *
+     * @param world
+     * @param cmd
+     * @param ans
+     * @param opt
+     */
+    public void minimize(Module world, Command cmd, A4Solution ans, A4Options opt) {
+        minimize(world, cmd, ans, opt, UBKind.INSTANCE_OR_NO_UPPER);
+    }
+
     public void minimize(Module world, Command cmd, A4Options opt, UBKind ub) {
+        A4Solution ans = TranslateAlloyToKodkod.execute_command(rep, world.getAllReachableSigs(), cmd, opt);
+        minimize(world, cmd, ans, opt, ub);
+    }
+
+
+    public void minimize(Module world, Command cmd, A4Solution ans, A4Options opt, UBKind ub) {
         this.sigsOrig = world.getAllReachableSigs();
         this.factsOrig = world.getAllReachableFacts();
         this.cmdOrig = cmd;
         this.optOrig = opt;
         this.boundMsg = "";
         this.ubKind = ub;
-        A4Solution ans = TranslateAlloyToKodkod.execute_command(rep, this.sigsOrig, cmd, opt);
-        instOrig = ans;
+        this.instOrig = ans;
 
+        // run once to get bounds written by reporter
+        TranslateAlloyToKodkod.execute_command(rep, this.sigsOrig, cmd, opt);
         initBounds(ans);
 
         {
