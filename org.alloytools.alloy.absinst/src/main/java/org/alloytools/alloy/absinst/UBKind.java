@@ -17,6 +17,7 @@ public enum UBKind {
                      * </ul>
                      */
                     INSTANCE,
+
                     /**
                      * upper bound is unrestricted or the tuples of the original instance for every
                      * signature and every relation individually, i.e., on signature might be bound
@@ -26,6 +27,7 @@ public enum UBKind {
                      * </ul>
                      */
                     INSTANCE_OR_NO_UPPER,
+
                     /**
                      * exact upper bound computed for every signature and field
                      */
