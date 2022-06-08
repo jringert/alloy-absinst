@@ -32,6 +32,13 @@ public class MinimizerMultipleInstanceTest {
         assertEquals(3, countInstances(module));
     }
 
+    @Test
+    public void testAddressBook3a() {
+        String module = "../org.alloytools.alloy.extra/extra/models/book/chapter2/addressBook3a.als";
+
+        assertEquals(5294, countInstances(module));
+    }
+
     private static int countInstances(String module) {
         int cmdNum = 0;
 
