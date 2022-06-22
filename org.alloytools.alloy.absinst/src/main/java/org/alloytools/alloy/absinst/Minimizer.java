@@ -391,18 +391,20 @@ public class Minimizer {
         } else if (UBKind.EXACT.equals(ubKind)) {
             for (Sig s : ans.getAllReachableSigs()) {
                 if (isRelevant(s)) {
+                    int atomNum = 0;
                     for (String atom : getAtoms(s, boundMsg)) {
-                        if (instanceOf(atom, s)) {
-                            BoundElement es = new BoundElement();
-                            es.s = s;
-                            es.atomName = atom;
+                        BoundElement es = new BoundElement();
+                        es.s = s;
+                        es.atomName = s.label + "$" + atomNum++;
+                        if (isInInstance(es)) {
                             upper.add(es);
-                            // add as lone sig in case it is neede later
+                            // add as lone sig in case it is needed later
                             if (loneSig.get(es.atomName()) == null) {
                                 loneSig.put(es.atomName(), new Sig.PrimSig(es.atomName(), (PrimSig) es.s, Attr.LONE));
                             }
-                            System.out.println(atom);
+                            System.out.println("added UB lone atom " + es.atomName);
                         }
+                        System.out.println("ignoring UB atom " + es.atomName + " from instance");
                     }
                     // TODO build the whole UB also including tuples
                     for (Field f : s.getFields()) {
@@ -413,6 +415,48 @@ public class Minimizer {
                 }
             }
         }
+    }
+
+    /**
+     * determine whether a bound element is contained in the original instance
+     *
+     * @param es
+     * @return
+     */
+    private boolean isInInstance(BoundElement es) {
+        if (es.isAtom()) {
+            for (BoundElement e : instance) {
+                if (e.isAtom() && e.atomName.equals(es.atomName)) {
+                    return true;
+                }
+            }
+        } else {
+            for (BoundElement e : instance) {
+                if (!e.isAtom() && e.f.label.equals(es.f.label) && sameTuple(e.t, es.t)) {
+                    return true;
+                }
+            }
+        }
+        return false;
+    }
+
+    /**
+     * check atom name correspondence in tuples
+     *
+     * @param t
+     * @param t2
+     * @return
+     */
+    private boolean sameTuple(A4Tuple t1, A4Tuple t2) {
+        if (t1.arity() != t2.arity()) {
+            return false;
+        }
+        for (int i = 0; i < t1.arity(); i++) {
+            if (!t1.atom(i).equals(t2.atom(i))) {
+                return false;
+            }
+        }
+        return true;
     }
 
     /**
@@ -560,7 +604,7 @@ public class Minimizer {
                 }
             }
             for (Sig s : atomsForSig.keySet()) {
-                upperBound = boundSigToAtMostExpr(upperBound, s, atomsForSig.get(s));
+                upperBound = boundSigOrFieldNotContainElems(upperBound, s, atomsForSig.get(s));
             }
 
         }
@@ -577,6 +621,35 @@ public class Minimizer {
             f = f.and(upperBound);
         }
         return cmd.change(f);
+    }
+
+    /**
+     * extends upperBound with a conjunct where SoF = SoF - elems (this is better
+     * than "elems not in SoF" as the latter would require the existence of all
+     * atoms in elems)
+     *
+     * @param upperBound existing UB constraints (initialized if null)
+     * @param sof signature or field to apply bound for
+     * @param badElems union of elements to be removed from UB
+     * @return
+     */
+    private Expr boundSigOrFieldNotContainElems(Expr upperBound, Expr sof, Expr badElems) {
+
+        Expr bound = null;
+        // there might not have been an atom/tuple in the instance so upper bound is empty set
+        if (badElems == null) {
+            // no removals
+            bound = null;
+        } else {
+            // we remove all bad atoms
+            bound = sof.equal(sof.minus(badElems));
+        }
+        if (upperBound == null) {
+            upperBound = bound;
+        } else {
+            upperBound = upperBound.and(bound);
+        }
+        return upperBound;
     }
 
     private Expr addFieldUBFromInstance(List<Sig> cmdSigs, Expr upperBound, BoundElement e) {
@@ -651,6 +724,14 @@ public class Minimizer {
         return upperBound;
     }
 
+    /**
+     * extends upperBound with a conjunct where S in subsigs of S + atMost
+     *
+     * @param upperBound existing UB constraints (initialized if null)
+     * @param s signature to add bound for
+     * @param atMost union of elements in UB
+     * @return
+     */
     private Expr boundSigToAtMostExpr(Expr upperBound, Sig s, Expr atMost) {
         // collect union of subsignatures of s
         Expr subs = null;
