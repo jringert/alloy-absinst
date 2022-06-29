@@ -344,6 +344,7 @@ public class Minimizer {
                     if (t != null) {
                         BoundElement e = new BoundElement();
                         e.s = s;
+                        e.atomName = t.atom(0);
                         e.t = t;
                         // we only do it for the actual signature otherwise
                         // this would lead to creating a tuple twice or multiple times if it shows
@@ -395,8 +396,8 @@ public class Minimizer {
                     for (String atom : getAtoms(s, boundMsg)) {
                         BoundElement es = new BoundElement();
                         es.s = s;
-                        es.atomName = s.label + "$" + atomNum++;
-                        if (isInInstance(es)) {
+                        es.atomName = sigLabelToAtomName(s.label) + "$" + atomNum++;
+                        if (!isInInstance(es)) {
                             upper.add(es);
                             // add as lone sig in case it is needed later
                             if (loneSig.get(es.atomName()) == null) {
@@ -415,6 +416,18 @@ public class Minimizer {
                 }
             }
         }
+    }
+
+    /**
+     * translates a signature label into an atom name (prefix of it) --- current
+     * implementation removes prefix "this/"
+     *
+     * @param label
+     * @return
+     */
+    private String sigLabelToAtomName(String label) {
+        String aName = label.replaceAll("this/", "");
+        return aName;
     }
 
     /**
