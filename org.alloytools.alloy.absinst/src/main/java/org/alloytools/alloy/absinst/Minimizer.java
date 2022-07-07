@@ -618,6 +618,26 @@ public class Minimizer {
             }
             for (Sig s : atomsForSig.keySet()) {
                 upperBound = boundSigOrFieldNotContainElems(upperBound, s, atomsForSig.get(s));
+
+                //FIXME there is still an issue here: when the lower bound is removed the corresponding atoms would need to be added as lone
+                Expr atMost = null;
+                for (Sig c : cmdSigs) {
+                    // collect all children of s
+                    if (c instanceof PrimSig) {
+                        if (((PrimSig) c).parent == s) {
+                            if (atMost == null) {
+                                atMost = c;
+                            } else {
+                                atMost = atMost.plus(c);
+                            }
+                        }
+                    }
+                }
+                if (upperBound == null) {
+                    upperBound = atMost;
+                } else if (atMost != null) {
+                    upperBound = upperBound.and(s.equal(atMost));
+                }
             }
 
         }
