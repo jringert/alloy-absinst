@@ -75,6 +75,10 @@ public class Minimizer {
      */
     private List<BoundElement>         upper          = new ArrayList<>();
     /**
+     * initial upper bound (all possible atoms and tuples not in the instance)
+     */
+    private List<BoundElement>         upperOrig      = new ArrayList<>();
+    /**
      * the kind of upper bound we use (different interpretation of bound elements in
      * upper)
      */
@@ -235,8 +239,8 @@ public class Minimizer {
     }
 
     private static void printBounds(Minimizer m) {
-        System.out.println("LB = " + m.lower);
-        System.out.println("UB = " + m.upper);
+        System.out.println("LB = " + m.getLowerBound());
+        System.out.println("UB = " + m.getUpperBound());
     }
 
     /**
@@ -404,8 +408,9 @@ public class Minimizer {
                                 loneSig.put(es.atomName(), new Sig.PrimSig(es.atomName(), (PrimSig) es.s, Attr.LONE));
                             }
                             System.out.println("added UB lone atom " + es.atomName);
+                        } else {
+                            System.out.println("ignoring UB atom " + es.atomName + " from instance");
                         }
-                        System.out.println("ignoring UB atom " + es.atomName + " from instance");
                     }
                     // TODO build the whole UB also including tuples
                     for (Field f : s.getFields()) {
@@ -416,6 +421,8 @@ public class Minimizer {
                 }
             }
         }
+        // remember initial value of upper bound
+        upperOrig = new ArrayList<Minimizer.BoundElement>(upper);
     }
 
     /**
@@ -565,11 +572,7 @@ public class Minimizer {
                 boolean sigMissingAndTupleInvalid = false;
                 for (int i = 0; i < e.t.arity(); i++) {
                     Expr s = retrieveAtomExpr(e.t.atom(i), true);
-                    if (tuple == null) {
-                        tuple = s;
-                    } else {
-                        tuple = tuple.product(s);
-                    }
+                    tuple = product(tuple, s);
                     // reject tuple if sig is missing
                     if (!hasAtom(lower, e.t.atom(i))) {
                         sigMissingAndTupleInvalid = true;
@@ -579,11 +582,7 @@ public class Minimizer {
                 }
                 if (!sigMissingAndTupleInvalid) {
                     Expr bound = tuple.in(e.f);
-                    if (lowerBound == null) {
-                        lowerBound = bound;
-                    } else {
-                        lowerBound = lowerBound.and(bound);
-                    }
+                    lowerBound = and(lowerBound, bound);
                 }
             }
         }
@@ -598,47 +597,96 @@ public class Minimizer {
                 }
             }
         } else if (UBKind.EXACT.equals(ubKind)) {
-            Map<Sig,Expr> atomsForSig = new LinkedHashMap<>();
-            for (BoundElement e : upper) {
+            // add lones for instance not in lower bound
+            for (BoundElement e : instance) {
                 if (e.isAtom()) {
-                    Expr atMost = atomsForSig.get(e.s);
                     PrimSig s = oneSig.get(e.atomName());
                     if (!cmdSigs.contains(s)) {
-                        // switch to the lone version for upper bound
+                        // switch to the lone version for completing up to instance
                         s = loneSig.get(e.atomName());
                         cmdSigs.add(s);
                     }
-                    if (atMost == null) {
-                        atMost = s;
-                    } else {
-                        atMost = atMost.plus(s);
-                    }
-                    atomsForSig.put(e.s, atMost);
+                } else {
+                    // TODO handle tuples in a similar way
                 }
             }
-            for (Sig s : atomsForSig.keySet()) {
-                upperBound = boundSigOrFieldNotContainElems(upperBound, s, atomsForSig.get(s));
 
-                //FIXME there is still an issue here: when the lower bound is removed the corresponding atoms would need to be added as lone
-                Expr atMost = null;
-                for (Sig c : cmdSigs) {
-                    // collect all children of s
-                    if (c instanceof PrimSig) {
-                        if (((PrimSig) c).parent == s) {
-                            if (atMost == null) {
-                                atMost = c;
-                            } else {
-                                atMost = atMost.plus(c);
+            // constrain to lower + inst + upper
+            List<BoundElement> l = new ArrayList<>(upperOrig);
+            l.removeAll(upper);
+            for (Sig s : sigsOrig) {
+                // for every relevant sig collect max atoms
+                if (isRelevant(s)) {
+                    Expr max = null;
+                    // iterate over children and atom sigs
+                    for (Sig child : cmdSigs) {
+                        if (child instanceof PrimSig) {
+                            if (((PrimSig) child).parent == s) {
+                                max = plus(max, child);
                             }
                         }
                     }
-                }
-                if (upperBound == null) {
-                    upperBound = atMost;
-                } else if (atMost != null) {
-                    upperBound = upperBound.and(s.equal(atMost));
+                    // add also upper bound stuff
+                    for (BoundElement e : l) {
+                        if (e.isAtom() && e.s == s) {
+                            Sig atom = loneSig.get(e.atomName);
+                            cmdSigs.add(atom);
+                            max = plus(max, atom);
+                        }
+                    }
+                    // set max of sig
+                    if (max == null) {
+                        upperBound = and(upperBound, s.no());
+                    } else {
+                        upperBound = and(upperBound, s.equal(max));
+                    }
                 }
             }
+
+            // TODO do something similar for fields
+
+            //
+            //            Map<Sig,Expr> atomsForSig = new LinkedHashMap<>();
+            //            for (BoundElement e : upper) {
+            //                if (e.isAtom()) {
+            //                    Expr atMost = atomsForSig.get(e.s);
+            //                    PrimSig s = oneSig.get(e.atomName());
+            //                    if (!cmdSigs.contains(s)) {
+            //                        // switch to the lone version for upper bound
+            //                        s = loneSig.get(e.atomName());
+            //                        cmdSigs.add(s);
+            //                    }
+            //                    if (atMost == null) {
+            //                        atMost = s;
+            //                    } else {
+            //                        atMost = atMost.plus(s);
+            //                    }
+            //                    atomsForSig.put(e.s, atMost);
+            //                }
+            //            }
+            //            for (Sig s : atomsForSig.keySet()) {
+            //                upperBound = boundSigOrFieldNotContainElems(upperBound, s, atomsForSig.get(s));
+            //
+            //                //FIXME there is still an issue here: when the lower bound is removed the corresponding atoms would need to be added as lone
+            //                Expr atMost = null;
+            //                for (Sig c : cmdSigs) {
+            //                    // collect all children of s
+            //                    if (c instanceof PrimSig) {
+            //                        if (((PrimSig) c).parent == s) {
+            //                            if (atMost == null) {
+            //                                atMost = c;
+            //                            } else {
+            //                                atMost = atMost.plus(c);
+            //                            }
+            //                        }
+            //                    }
+            //                }
+            //                if (upperBound == null) {
+            //                    upperBound = atMost;
+            //                } else if (atMost != null) {
+            //                    upperBound = upperBound.and(s.equal(atMost));
+            //                }
+            //            }
 
         }
 
@@ -654,6 +702,54 @@ public class Minimizer {
             f = f.and(upperBound);
         }
         return cmd.change(f);
+    }
+
+    /**
+     * union of e1 and e2 robust to nulls
+     *
+     * @param max
+     * @param s
+     */
+    private Expr plus(Expr e1, Expr e2) {
+        if (e1 == null) {
+            return e2;
+        }
+        if (e2 == null) {
+            return e1;
+        }
+        return e1.plus(e2);
+    }
+
+    /**
+     * conjunction of e1 and e2 robust to nulls
+     *
+     * @param e1
+     * @param e2
+     */
+    private Expr and(Expr e1, Expr e2) {
+        if (e1 == null) {
+            return e2;
+        }
+        if (e2 == null) {
+            return e1;
+        }
+        return e1.and(e2);
+    }
+
+    /**
+     * product of e1 and e2 robust to nulls
+     *
+     * @param e1
+     * @param e2
+     */
+    private Expr product(Expr e1, Expr e2) {
+        if (e1 == null) {
+            return e2;
+        }
+        if (e2 == null) {
+            return e1;
+        }
+        return e1.product(e2);
     }
 
     /**
@@ -949,6 +1045,11 @@ public class Minimizer {
     }
 
     public List<BoundElement> getUpperBound() {
+        if (UBKind.EXACT.equals(ubKind)) {
+            List<BoundElement> tmp = new ArrayList<>(upperOrig);
+            tmp.removeAll(upper);
+            return tmp;
+        }
         return this.upper;
     }
 

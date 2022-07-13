@@ -40,7 +40,7 @@ public class MinimizerUBKindTest {
         Minimizer m = MinimizerUtil.testMin(module, cmdNum, UBKind.EXACT);
 
         assertEquals("[A$0]", m.getLowerBound().toString());
-        assertEquals("[UB for this/A]", m.getUpperBound().toString());
+        assertEquals("[]", m.getUpperBound().toString());
 
     }
 
@@ -53,7 +53,7 @@ public class MinimizerUBKindTest {
         Minimizer m = MinimizerUtil.testMin(module, cmdNum, UBKind.EXACT);
 
         assertEquals("[A$0]", m.getLowerBound().toString());
-        assertEquals("[UB for this/B, UB for this/A]", m.getUpperBound().toString());
+        assertEquals("[]", m.getUpperBound().toString());
 
     }
 

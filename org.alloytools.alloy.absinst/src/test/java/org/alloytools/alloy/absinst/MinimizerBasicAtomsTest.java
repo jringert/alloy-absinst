@@ -28,7 +28,7 @@ public class MinimizerBasicAtomsTest {
         Minimizer m = MinimizerUtil.testMin(module, cmdNum, UBKind.EXACT);
 
         assertEquals("[A$0]", m.getLowerBound().toString());
-        assertEquals("[UB for this/A]", m.getUpperBound().toString());
+        assertEquals("[]", m.getUpperBound().toString());
     }
 
     @Test
@@ -43,6 +43,18 @@ public class MinimizerBasicAtomsTest {
         assertEquals("[]", m.getUpperBound().toString());
     }
 
+    @Test
+    public void testSomeARunExact() {
+        String module = "src/test/alloy/basic/someA.als";
+
+        int cmdNum = 0;
+
+        Minimizer m = MinimizerUtil.testMin(module, cmdNum, UBKind.EXACT);
+
+        assertEquals("[A$0]", m.getLowerBound().toString());
+        assertEquals("[A$1, A$2]", m.getUpperBound().toString());
+    }
+
 
     @Test
     public void testEx2ARun() {
@@ -54,6 +66,18 @@ public class MinimizerBasicAtomsTest {
 
         assertEquals("[A$0, A$1]", m.getLowerBound().toString());
         assertEquals("[UB for this/A]", m.getUpperBound().toString());
+    }
+
+    @Test
+    public void testEx2ARunExact() {
+        String module = "src/test/alloy/basic/ex2A.als";
+
+        int cmdNum = 0;
+
+        Minimizer m = MinimizerUtil.testMin(module, cmdNum, UBKind.EXACT);
+
+        assertEquals("[A$0, A$1]", m.getLowerBound().toString());
+        assertEquals("[]", m.getUpperBound().toString());
     }
 
 
@@ -70,6 +94,18 @@ public class MinimizerBasicAtomsTest {
     }
 
     @Test
+    public void testOneAtwoBRunExact() {
+        String module = "src/test/alloy/basic/oneAtwoB.als";
+
+        int cmdNum = 0;
+
+        Minimizer m = MinimizerUtil.testMin(module, cmdNum, UBKind.EXACT);
+
+        assertEquals("[A$0, B$0, B$1]", m.getLowerBound().toString());
+        assertEquals("[]", m.getUpperBound().toString());
+    }
+
+    @Test
     public void testOneABsubRun() {
         String module = "src/test/alloy/basic/oneABsub.als";
 
@@ -79,5 +115,17 @@ public class MinimizerBasicAtomsTest {
 
         assertEquals("[A$0]", m.getLowerBound().toString());
         assertEquals("[UB for this/B, UB for this/A]", m.getUpperBound().toString());
+    }
+
+    @Test
+    public void testOneABsubRunExact() {
+        String module = "src/test/alloy/basic/oneABsub.als";
+
+        int cmdNum = 0;
+
+        Minimizer m = MinimizerUtil.testMin(module, cmdNum, UBKind.EXACT);
+
+        assertEquals("[A$0]", m.getLowerBound().toString());
+        assertEquals("[]", m.getUpperBound().toString());
     }
 }
