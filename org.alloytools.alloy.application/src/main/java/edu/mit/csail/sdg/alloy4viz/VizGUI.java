@@ -15,6 +15,8 @@
 
 package edu.mit.csail.sdg.alloy4viz;
 
+import static edu.mit.csail.sdg.alloy4.A4Preferences.minDisplay;
+import static edu.mit.csail.sdg.alloy4.A4Preferences.upperBound;
 import static edu.mit.csail.sdg.alloy4.OurUtil.menu;
 import static edu.mit.csail.sdg.alloy4.OurUtil.menuItem;
 
@@ -55,6 +57,7 @@ import java.util.Set;
 import java.util.StringJoiner;
 import java.util.prefs.Preferences;
 
+import javax.swing.Action;
 import javax.swing.Box;
 import javax.swing.BoxLayout;
 import javax.swing.Icon;
@@ -76,8 +79,10 @@ import javax.swing.plaf.basic.BasicSplitPaneUI;
 
 import org.alloytools.alloy.absinst.Minimizer;
 import org.alloytools.alloy.absinst.UBKind;
+import org.alloytools.alloy.absinst.viz.AbsWriter;
 import org.alloytools.alloy.absinst.viz.AbstWriterWithInstance;
 
+import edu.mit.csail.sdg.alloy4.A4Preferences.ChoicePref;
 import edu.mit.csail.sdg.alloy4.A4Preferences.IntPref;
 import edu.mit.csail.sdg.alloy4.A4Preferences.StringPref;
 import edu.mit.csail.sdg.alloy4.A4Reporter;
@@ -192,6 +197,9 @@ public final class VizGUI implements ComponentListener {
 
     /** The trace navigation menu items. */
     private final JMenuItem     rightNavMenu, leftNavMenu;
+
+    /** Menu for instance miniization */
+    private JMenu minMenu;
 
     /** Current font size. */
     private int                 fontSize        = 12;
@@ -680,6 +688,7 @@ public final class VizGUI implements ComponentListener {
             if (standalone || windowmenu == null)
                 windowmenu = menu(mb, "&Window", doRefreshWindow());
             this.windowmenu = windowmenu;
+            minMenu = menu(mb, "&Min Options", doRefreshMinOptions());
         } finally {
             wrap = false;
         }
@@ -1712,6 +1721,53 @@ public final class VizGUI implements ComponentListener {
         return null;
     }
 
+    /** This method refreshes the "min options" menu. */
+    private Runner doRefreshMinOptions() {
+        if (wrap)
+            return wrapMe();
+        minMenu.removeAll();
+        try {
+            wrap = true;
+            addToMenu(minMenu, upperBound);
+            addToMenu(minMenu, minDisplay);
+        } finally {
+            wrap = false;
+        }
+        return null;
+    }
+
+    /**
+     * Creates a menu item for each choice preference (from <code>prefs</code>) and
+     * adds it to a given parent menu (<code>parent</code>).
+     */
+    @SuppressWarnings({
+                       "rawtypes", "unchecked"
+    } )
+    private JMenu addToMenu(JMenu parent, ChoicePref... prefs) {
+        JMenu last = null;
+        for (ChoicePref pref : prefs) {
+            last = new JMenu(pref.title + ": " + pref.renderValueShort(pref.get()));
+            addSubmenuItems(last, pref);
+            parent.add(last);
+        }
+        return last;
+    }
+
+    /**
+     * Creates a sub-menu item for each choice of a given preference
+     * (<code>pref</code>) and adds it to a given parent menu (<code>parent</code>).
+     */
+    @SuppressWarnings({
+                       "rawtypes", "unchecked"
+    } )
+    private void addSubmenuItems(JMenu parent, ChoicePref pref) {
+        Object selected = pref.get();
+        for (Object item : pref.validChoices()) {
+            Action action = pref.getAction(item);
+            menuItem(parent, pref.renderValueLong(item).toString(), action, item == selected ? iconYes : iconNo);
+        }
+    }
+
     /**
      * This method inserts "Minimize" and "Maximize" entries into a JMenu.
      */
@@ -2017,8 +2073,23 @@ public final class VizGUI implements ComponentListener {
             A4Options options = new A4Options();
             options.solver = A4Options.SatSolver.SAT4J;
 
+            int ub_selection = upperBound.get();
+            UBKind ub;
+            if (ub_selection == 0) {
+                ub = UBKind.NO_UPPER;
+            } else if (ub_selection == 1) {
+                ub = UBKind.INSTANCE;
+            } else if (ub_selection == 2) {
+                ub = UBKind.INSTANCE_OR_NO_UPPER;
+            } else {
+                ub = UBKind.EXACT;
+            }
+
+            int display_selection = minDisplay.get();
+
+
             Minimizer m = new Minimizer();
-            m.minimize(world, command, options, UBKind.INSTANCE_OR_NO_UPPER);
+            m.minimize(world, command, options, ub);
 
             inst = m.getInstOrig();
             HashMap<A4Tuple,String> lower = m.getLowerBoundOriginMap();
@@ -2035,33 +2106,49 @@ public final class VizGUI implements ComponentListener {
                 }
             };
 
-            PrintWriter out;
-            try {
-                out = new PrintWriter(System.getProperty("user.dir") + "/instWBounds.xml", "UTF-8");
-                AbstWriterWithInstance.writeInstance(rep, inst, out, null, null, lower, upper);
-                if (out.checkError())
-                    throw new ErrorFatal("Error writing the solution XML file.");
-                out.close();
-            } catch (FileNotFoundException e2) {
-                // TODO Auto-generated catch block
-                e2.printStackTrace();
-            } catch (UnsupportedEncodingException e2) {
-                // TODO Auto-generated catch block
-                e2.printStackTrace();
+            if (display_selection == 1) { //overlay
+
+                PrintWriter out;
+                try {
+                    out = new PrintWriter(System.getProperty("user.dir") + "/instWBounds.xml", "UTF-8");
+                    AbstWriterWithInstance.writeInstance(rep, inst, out, null, null, lower, upper);
+                    if (out.checkError())
+                        throw new ErrorFatal("Error writing the solution XML file.");
+                    out.close();
+                } catch (FileNotFoundException e2) {
+                    // TODO Auto-generated catch block
+                    e2.printStackTrace();
+                } catch (UnsupportedEncodingException e2) {
+                    // TODO Auto-generated catch block
+                    e2.printStackTrace();
+                }
+
+                PrintWriter out_theme = null;
+                try {
+                    out_theme = new PrintWriter(System.getProperty("user.dir") + "/instWBounds.thm");
+                    AbstWriterWithInstance.writeTheme(inst, out_theme, lowerSig, lowerField);
+                    out_theme.close();
+                } catch (FileNotFoundException e1) {
+                    // TODO Auto-generated catch block
+                    e1.printStackTrace();
+                }
+
+                loadXML(System.getProperty("user.dir") + "/instWBounds.xml", true);
+                loadThemeFile(System.getProperty("user.dir") + "/instWBounds.thm");
+            } else { //indepedent
+                PrintWriter out = null;
+                try {
+                    out = new PrintWriter(System.getProperty("user.dir") + "/instWBounds.xml");
+                    AbsWriter.writeInstance(rep, inst, out, null, null, lower, upper);
+                    out.close();
+                } catch (FileNotFoundException e1) {
+                    // TODO Auto-generated catch block
+                    e1.printStackTrace();
+                }
+
+                loadXML(System.getProperty("user.dir") + "/instWBounds.xml", true);
             }
 
-            PrintWriter out_theme = null;
-            try {
-                out_theme = new PrintWriter(System.getProperty("user.dir") + "/instWBounds.thm");
-                AbstWriterWithInstance.writeTheme(inst, out_theme, lowerSig, lowerField);
-                out_theme.close();
-            } catch (FileNotFoundException e1) {
-                // TODO Auto-generated catch block
-                e1.printStackTrace();
-            }
-
-            loadXML(System.getProperty("user.dir") + "/instWBounds.xml", true);
-            loadThemeFile(System.getProperty("user.dir") + "/instWBounds.thm");
         }
         return wrapMe();
 

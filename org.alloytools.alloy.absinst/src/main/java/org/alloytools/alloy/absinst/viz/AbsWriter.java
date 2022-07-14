@@ -455,7 +455,7 @@ public final class AbsWriter {
      * If this solution is a satisfiable solution, this method will write it out in
      * XML format as a sequence of &lt;instance&gt;..&lt;/instance&gt;.
      */
-    static void writeInstance(A4Reporter rep, A4Solution sol, PrintWriter out, Iterable<Func> extraSkolems, Map<String,String> sources, HashMap<A4Tuple,String> lower, ArrayList<String> upper) throws Err {
+    public static void writeInstance(A4Reporter rep, A4Solution sol, PrintWriter out, Iterable<Func> extraSkolems, Map<String,String> sources, HashMap<A4Tuple,String> lower, ArrayList<String> upper) throws Err {
         if (!sol.satisfiable())
             throw new ErrorAPI("This solution is unsatisfiable.");
         try {

@@ -639,6 +639,7 @@ public class A4Preferences {
                                                                      };
 
     public enum Decompose {
+
                            /** regular amalgamated strategy. */
                            OFF("0", "batch"),
                            /** hybrid strategy, competitive parallel vs amalgamated. */
@@ -734,6 +735,7 @@ public class A4Preferences {
                                                                           };
 
     public enum Verbosity {
+
                            /** Level 0. */
                            DEFAULT("0", "low"),
                            /** Level 1. */
@@ -779,8 +781,42 @@ public class A4Preferences {
         }
     }
 
-    public static Pref< ? >[] nonUserPrefs = new Pref< ? >[] {
-                                                              AnalyzerX, AnalyzerHeight, AnalyzerWidth, AnalyzerY, Model0, Model1, Model2, Model3
+    /** The upper bound minimization strategy. */
+    private static final String[]     upperBoundLabels = new String[] {
+                                                                       "None", "Instance", "Instance or None", "Exact"
+    };
+    public static final IntChoicePref upperBound       = new IntChoicePref("UpperBound", "Upper Bound", Arrays.asList(0, 1, 2, 3), 2) {
+
+                                                           @Override
+                                                           public Object renderValueShort(Integer value) {
+                                                               return upperBoundLabels[value];
+                                                           }
+
+                                                           @Override
+                                                           public Object renderValueLong(Integer value) {
+                                                               return upperBoundLabels[value];
+                                                           }
+                                                       };
+
+    /** The upper bound minimization strategy. */
+    private static final String[]     minDisplayLabels = new String[] {
+                                                                       "Independent", "Over Instance"
+    };
+    public static final IntChoicePref minDisplay       = new IntChoicePref("DisplayStyle", "Display Style", Arrays.asList(0, 1), 1) {
+
+                                                           @Override
+                                                           public Object renderValueShort(Integer value) {
+                                                               return minDisplayLabels[value];
+                                                           }
+
+                                                           @Override
+                                                           public Object renderValueLong(Integer value) {
+                                                               return minDisplayLabels[value];
+                                                           }
+                                                       };
+
+    public static Pref< ? >[]         nonUserPrefs     = new Pref< ? >[] {
+                                                                          AnalyzerX, AnalyzerHeight, AnalyzerWidth, AnalyzerY, Model0, Model1, Model2, Model3
     };
 
     public static List<Pref< ? >> allPrefs() {
