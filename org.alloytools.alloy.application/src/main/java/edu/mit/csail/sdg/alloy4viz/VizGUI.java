@@ -41,7 +41,10 @@ import java.awt.geom.AffineTransform;
 import java.awt.geom.Ellipse2D;
 import java.awt.geom.Path2D;
 import java.io.File;
+import java.io.FileNotFoundException;
 import java.io.IOException;
+import java.io.PrintWriter;
+import java.io.UnsupportedEncodingException;
 import java.lang.reflect.Method;
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -71,10 +74,17 @@ import javax.swing.ScrollPaneConstants;
 import javax.swing.WindowConstants;
 import javax.swing.plaf.basic.BasicSplitPaneUI;
 
+import org.alloytools.alloy.absinst.Minimizer;
+import org.alloytools.alloy.absinst.UBKind;
+import org.alloytools.alloy.absinst.viz.AbstWriterWithInstance;
+
 import edu.mit.csail.sdg.alloy4.A4Preferences.IntPref;
 import edu.mit.csail.sdg.alloy4.A4Preferences.StringPref;
+import edu.mit.csail.sdg.alloy4.A4Reporter;
 import edu.mit.csail.sdg.alloy4.Computer;
 import edu.mit.csail.sdg.alloy4.ConstList;
+import edu.mit.csail.sdg.alloy4.ErrorFatal;
+import edu.mit.csail.sdg.alloy4.ErrorWarning;
 import edu.mit.csail.sdg.alloy4.OurBorder;
 import edu.mit.csail.sdg.alloy4.OurCheckbox;
 import edu.mit.csail.sdg.alloy4.OurConsole;
@@ -84,10 +94,14 @@ import edu.mit.csail.sdg.alloy4.Runner;
 import edu.mit.csail.sdg.alloy4.Util;
 import edu.mit.csail.sdg.alloy4.Version;
 import edu.mit.csail.sdg.alloy4graph.GraphViewer;
+import edu.mit.csail.sdg.ast.Command;
 import edu.mit.csail.sdg.ast.Expr;
 import edu.mit.csail.sdg.ast.ExprConstant;
 import edu.mit.csail.sdg.ast.ExprVar;
 import edu.mit.csail.sdg.ast.Sig;
+import edu.mit.csail.sdg.ast.Sig.Field;
+import edu.mit.csail.sdg.parser.CompModule;
+import edu.mit.csail.sdg.translator.A4Options;
 import edu.mit.csail.sdg.translator.A4Solution;
 import edu.mit.csail.sdg.translator.A4Tuple;
 import edu.mit.csail.sdg.translator.A4TupleSet;
@@ -143,7 +157,7 @@ public final class VizGUI implements ComponentListener {
     /** The buttons on the toolbar. */
     private final JButton       projectionButton, openSettingsButton, closeSettingsButton, magicLayout,
                     loadSettingsButton, saveSettingsButton, saveAsSettingsButton, resetSettingsButton, updateSettingsButton,
-                    openEvaluatorButton, closeEvaluatorButton, enumerateButton, vizButton, treeButton,
+                    openEvaluatorButton, closeEvaluatorButton, enumerateButton, vizButton, treeButton, minButton,
                     txtButton, tableButton, leftNavButton, rightNavButton, cnfgButton, forkButton, initButton, pathButton/*
                                                                                                                           * , dotButton,
                                                                                                                           * xmlButton
@@ -198,6 +212,10 @@ public final class VizGUI implements ComponentListener {
      * The current states and visualization settings; null if none is loaded.
      */
     private List<VizState>      myStates        = new ArrayList<VizState>();
+
+    //For abstract instance display and minimizing instances
+    private CompModule          world           = null;
+    private Command             cmd             = null;
 
     /**
      * Returns the current visualization settings (and you can call
@@ -700,6 +718,8 @@ public final class VizGUI implements ComponentListener {
             txtButton = makeSolutionButton("Txt", "Show the textual output for the Graph", "images/24_plaintext.gif", doShowTxt());
             tableButton = makeSolutionButton("Table", "Show the table output for the Graph", "images/24_plaintext.gif", doShowTable());
             treeButton = makeSolutionButton("Tree", "Show Tree", "images/24_texttree.gif", doShowTree());
+            minButton = makeSolutionButton("Min", "Show min", "images/24_texttree.gif", doShowMinimize());
+
             if (frame != null)
                 addDivider();
             toolbar.add(closeSettingsButton = OurUtil.button("Close", "Close the theme customization panel", "images/24_settings_close2.gif", doCloseThemePanel()));
@@ -845,6 +865,7 @@ public final class VizGUI implements ComponentListener {
      * Helper method that refreshes the right-side visualization panel with the
      * latest settings.
      */
+    @SuppressWarnings("restriction" )
     private void updateDisplay() {
         if (myStates.isEmpty())
             return;
@@ -955,6 +976,8 @@ public final class VizGUI implements ComponentListener {
             // break;
             // }
             default : {
+
+
                 List<VizState> numPanes = isTrace && !isMeta ? myStates : myStates.subList(statepanes - 1, statepanes);
                 if (myGraphPanel == null || numPanes.size() != myGraphPanel.numPanels()) {
                     if (isTrace && !isMeta) // [electrum] test whether trace
@@ -973,12 +996,17 @@ public final class VizGUI implements ComponentListener {
                                     getVizState().set(i, null);
                                 } else {
                                     AlloyInstance myInstance = StaticInstanceReader.parseInstance(f, current + i);
+
+
+
                                     if (getVizState().get(i) != null)
                                         getVizState().get(i).loadInstance(myInstance);
                                     else {
                                         getVizState().set(i, new VizState(getVizState().get(statepanes - 1))); // [electrum] get the previous state (including theme)
                                         getVizState().get(i).loadInstance(myInstance);
                                     }
+
+
                                 }
                             } catch (Throwable e) {
                                 OurDialog.alert(frame, "Cannot read or parse Alloy instance: " + xmlFileName + "\n\nError: " + e.getMessage());
@@ -1980,6 +2008,65 @@ public final class VizGUI implements ComponentListener {
         return wrapMe();
     }
 
+    @SuppressWarnings("restriction" )
+    public Runner doShowMinimize() {
+        if (!wrap) {
+            A4Solution inst = myStates.get(statepanes - 1).getOriginalInstance().originalA4;
+            CompModule world = this.world;
+            Command command = cmd;
+            A4Options options = new A4Options();
+            options.solver = A4Options.SatSolver.SAT4J;
+
+            Minimizer m = new Minimizer();
+            m.minimize(world, command, options, UBKind.INSTANCE_OR_NO_UPPER);
+
+            inst = m.getInstOrig();
+            HashMap<A4Tuple,String> lower = m.getLowerBoundOriginMap();
+            ArrayList<String> upper = m.getUpperBoundNames();
+            HashMap<A4Tuple,Sig> lowerSig = m.getLowerBoundSigs();
+            HashMap<A4Tuple,Field> lowerField = m.getLowerBoundFields();
+
+            A4Reporter rep = new A4Reporter() {
+
+                @Override
+                public void warning(ErrorWarning msg) {
+                    System.out.println(msg.toString().trim());
+                    System.out.flush();
+                }
+            };
+
+            PrintWriter out;
+            try {
+                out = new PrintWriter(System.getProperty("user.dir") + "/instWBounds.xml", "UTF-8");
+                AbstWriterWithInstance.writeInstance(rep, inst, out, null, null, lower, upper);
+                if (out.checkError())
+                    throw new ErrorFatal("Error writing the solution XML file.");
+                out.close();
+            } catch (FileNotFoundException e2) {
+                // TODO Auto-generated catch block
+                e2.printStackTrace();
+            } catch (UnsupportedEncodingException e2) {
+                // TODO Auto-generated catch block
+                e2.printStackTrace();
+            }
+
+            PrintWriter out_theme = null;
+            try {
+                out_theme = new PrintWriter(System.getProperty("user.dir") + "/instWBounds.thm");
+                AbstWriterWithInstance.writeTheme(inst, out_theme, lowerSig, lowerField);
+                out_theme.close();
+            } catch (FileNotFoundException e1) {
+                // TODO Auto-generated catch block
+                e1.printStackTrace();
+            }
+
+            loadXML(System.getProperty("user.dir") + "/instWBounds.xml", true);
+            loadThemeFile(System.getProperty("user.dir") + "/instWBounds.thm");
+        }
+        return wrapMe();
+
+    }
+
     // /** This method changes the display mode to show the equivalent dot text
     // (the return value is always null). */
     // public Runner doShowDot() {
@@ -2121,6 +2208,15 @@ public final class VizGUI implements ComponentListener {
     private int normalize(int idx, int length, int loop) {
         int lln = length - loop;
         return idx > loop ? (((idx - loop) % lln) + loop) : idx;
+    }
+
+    //Helper methods for minimization
+    public void setWorld(CompModule world) {
+        this.world = world;
+    }
+
+    public void setCommand(Command cmd) {
+        this.cmd = cmd;
     }
 
 }

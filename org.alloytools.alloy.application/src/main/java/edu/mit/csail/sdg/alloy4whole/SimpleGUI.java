@@ -167,6 +167,7 @@ import edu.mit.csail.sdg.ast.ExprVar;
 import edu.mit.csail.sdg.ast.Module;
 import edu.mit.csail.sdg.ast.Sig;
 import edu.mit.csail.sdg.ast.Sig.Field;
+import edu.mit.csail.sdg.parser.CompModule;
 import edu.mit.csail.sdg.parser.CompUtil;
 import edu.mit.csail.sdg.sim.SimInstance;
 import edu.mit.csail.sdg.sim.SimTuple;
@@ -1197,6 +1198,11 @@ public final class SimpleGUI implements ComponentListener, Listener {
         opt.decompose_mode = DecomposePref.get().ordinal();
         opt.originalFilename = Util.canon(text.get().getFilename());
         opt.solver = Solver.get();
+
+        CompModule world = CompUtil.parseEverything_fromString(A4Reporter.NOP, text.get().getText());
+        viz.setWorld(world);
+        viz.setCommand(world.getAllCommands().get(latestCommand));
+
         task.bundleIndex = i;
         task.bundleWarningNonFatal = WarningNonfatal.get();
         task.map = text.takeSnapshot();

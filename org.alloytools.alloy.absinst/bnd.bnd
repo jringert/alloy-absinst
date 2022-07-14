@@ -1,7 +1,6 @@
 -buildpath: \
 	org.alloytools.alloy.core;version=latest,\
-	org.alloytools:pardinus.core;version=1.3.0,\
-	org.alloytools.alloy.application;version=latest,\
+	org.alloytools:pardinus.core;version='1.3.0',\
 	biz.aQute.wrapper.junit
 -testpath: \
 	biz.aQute.wrapper.junit, \
