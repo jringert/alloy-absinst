@@ -85,7 +85,6 @@ public class Minimizer {
     private UBKind                     ubKind         = UBKind.EXACT;
 
     protected Map<String,BoundElement> boundElem4Atom = new LinkedHashMap<>();
-    protected Map<String,PrimSig>      oneSig         = new LinkedHashMap<>();
     protected Map<String,PrimSig>      loneSig        = new LinkedHashMap<>();
 
     private A4Solution                 instOrig;
@@ -358,9 +357,6 @@ public class Minimizer {
                         if (instanceOf(e, s)) {
                             lower.add(e);
                             boundElem4Atom.put(e.atomName(), e);
-                            // FIXME two sigs per atom are not good when creating tuples for fields!
-                            // idea: change it here to lone and change generation of lower bounds!
-                            oneSig.put(e.atomName(), new Sig.PrimSig(e.atomName(), (PrimSig) e.s, Attr.ONE));
                             loneSig.put(e.atomName(), new Sig.PrimSig(e.atomName(), (PrimSig) e.s, Attr.LONE));
                         }
                     }
@@ -572,13 +568,15 @@ public class Minimizer {
         for (BoundElement e : lower) {
             if (e.isAtom()) {
                 // atoms only added as singleton sigs
-                cmdSigs.add(oneSig.get(e.atomName()));
+                Sig s = loneSig.get(e.atomName());
+                lowerBound = and(lowerBound, s.one());
+                cmdSigs.add(s);
             } else {
                 // fields added as constraints
                 Expr tuple = null;
                 boolean sigMissingAndTupleInvalid = false;
                 for (int i = 0; i < e.t.arity(); i++) {
-                    Expr s = retrieveAtomExpr(e.t.atom(i), true);
+                    Expr s = retrieveAtomExpr(e.t.atom(i));
                     tuple = product(tuple, s);
                     // reject tuple if sig is missing
                     if (!hasAtom(lower, e.t.atom(i))) {
@@ -587,7 +585,7 @@ public class Minimizer {
                         break;
                     }
                 }
-                if (!sigMissingAndTupleInvalid) {
+                if (!sigMissingAndTupleInvalid && tuple != null) {
                     Expr bound = tuple.in(e.f);
                     lowerBound = and(lowerBound, bound);
                 }
@@ -607,10 +605,8 @@ public class Minimizer {
             // add lones for instance not in lower bound
             for (BoundElement e : instance) {
                 if (e.isAtom()) {
-                    PrimSig s = oneSig.get(e.atomName());
+                    PrimSig s = loneSig.get(e.atomName());
                     if (!cmdSigs.contains(s)) {
-                        // switch to the lone version for completing up to instance
-                        s = loneSig.get(e.atomName());
                         cmdSigs.add(s);
                     }
                 } else {
@@ -795,13 +791,13 @@ public class Minimizer {
             if (ei.f == e.f) {
                 Expr tuple = null;
                 for (int i = 0; i < ei.t.arity(); i++) {
-                    // TODO construct tuple based on atoms
+                    // construct tuple based on atoms
                     String atomName = ei.t.atom(i);
                     // check if one atom is used
-                    Expr atom = oneSig.get(atomName);
+                    Expr atom = loneSig.get(atomName);
                     // atom not found in sigs or one sig not included
                     if (atom == null || !cmdSigs.contains(atom)) {
-                        atom = retrieveAtomExpr(atomName, false);
+                        atom = retrieveAtomExpr(atomName);
                     }
                     // add lone sig if needed
                     if (atom instanceof PrimSig) {
@@ -843,17 +839,11 @@ public class Minimizer {
         for (BoundElement ie : instance) {
             // only care about this signature
             if (ie.s == e.s && instanceOf(ie, e.s)) {
-                PrimSig s = oneSig.get(ie.atomName());
+                PrimSig s = loneSig.get(ie.atomName());
                 if (!cmdSigs.contains(s)) {
-                    // switch to the lone version for upper bound
-                    s = loneSig.get(ie.atomName());
                     cmdSigs.add(s);
                 }
-                if (atMost == null) {
-                    atMost = s;
-                } else {
-                    atMost = atMost.plus(s);
-                }
+                atMost = plus(atMost, s);
             }
         }
         upperBound = boundSigToAtMostExpr(upperBound, e.s, atMost);
@@ -899,11 +889,7 @@ public class Minimizer {
             // we set s in (atoms + children sigs)
             bound = s.in(atMost.plus(subs));
         }
-        if (upperBound == null) {
-            upperBound = bound;
-        } else {
-            upperBound = upperBound.and(bound);
-        }
+        upperBound = and(upperBound, bound);
         return upperBound;
     }
 
@@ -974,13 +960,9 @@ public class Minimizer {
                     String atom = e.t.atom(i);
                     Expr s = vars.get(atom);
                     if (s == null) {
-                        s = retrieveAtomExpr(atom, true);
+                        s = retrieveAtomExpr(atom);
                     }
-                    if (tuple == null) {
-                        tuple = s;
-                    } else {
-                        tuple = tuple.product(s);
-                    }
+                    tuple = product(tuple, s);
                     // reject tuple if sig is missing
                     if (!hasAtom(lower, e.t.atom(i))) {
                         sigMissingAndTupleInvalid = true;
@@ -988,13 +970,9 @@ public class Minimizer {
                         break;
                     }
                 }
-                if (!sigMissingAndTupleInvalid) {
+                if (!sigMissingAndTupleInvalid && tuple != null) {
                     Expr bound = tuple.in(e.f);
-                    if (lowerBound == null) {
-                        lowerBound = bound;
-                    } else {
-                        lowerBound = lowerBound.and(bound);
-                    }
+                    lowerBound = and(lowerBound, bound);
                 }
             }
         }
@@ -1010,16 +988,10 @@ public class Minimizer {
      * this can be a signature or a constant, e.g., integer
      *
      * @param atom
-     * @param useOneSig in case of signatures use one (lone if false)
      * @return
      */
-    private Expr retrieveAtomExpr(String atom, boolean useOneSig) {
-        Expr e = null;
-        if (useOneSig) {
-            e = oneSig.get(atom);
-        } else {
-            e = loneSig.get(atom);
-        }
+    private Expr retrieveAtomExpr(String atom) {
+        Expr e = loneSig.get(atom);
         if (e == null) {
             try {
                 int i = Integer.parseInt(atom);
@@ -1036,7 +1008,7 @@ public class Minimizer {
 
     private boolean hasAtom(List<BoundElement> bound, String atom) {
         // if it is not a signature it is always present
-        if (!(retrieveAtomExpr(atom, true) instanceof PrimSig)) {
+        if (!(retrieveAtomExpr(atom) instanceof PrimSig)) {
             return true;
         }
         for (BoundElement be : bound) {
