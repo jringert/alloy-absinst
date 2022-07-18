@@ -24,6 +24,7 @@ import edu.mit.csail.sdg.ast.Module;
 import edu.mit.csail.sdg.ast.Sig;
 import edu.mit.csail.sdg.ast.Sig.Field;
 import edu.mit.csail.sdg.ast.Sig.PrimSig;
+import edu.mit.csail.sdg.ast.Type.ProductType;
 import edu.mit.csail.sdg.parser.CompUtil;
 import edu.mit.csail.sdg.translator.A4Options;
 import edu.mit.csail.sdg.translator.A4Solution;
@@ -95,6 +96,7 @@ public class Minimizer {
         Sig     s;
         A4Tuple t;
         String  atomName;
+        Expr    expr;
 
         boolean isAtom() {
             if (atomName != null) {
@@ -340,24 +342,27 @@ public class Minimizer {
      * @param ans
      */
     private void initBounds(A4Solution ans) {
-        Map<Sig,List<BoundElement>> atomsPerSig = new LinkedHashMap<>();
+        Map<Sig,List<Expr>> atomsPerSig = new LinkedHashMap<>();
 
         // lower bounds are exact tuples
         for (Sig s : ans.getAllReachableSigs()) {
             if (isRelevant(s)) {
                 for (A4Tuple t : ans.eval(s)) {
                     if (t != null) {
-                        BoundElement e = new BoundElement();
-                        e.s = s;
-                        e.atomName = t.atom(0);
-                        e.t = t;
+                        BoundElement be = new BoundElement();
+                        be.s = s;
+                        be.atomName = t.atom(0);
+                        be.t = t;
                         // we only do it for the actual signature otherwise
                         // this would lead to creating a tuple twice or multiple times if it shows
                         // up multiple times across the inheritance hierarchy
-                        if (instanceOf(e, s)) {
-                            lower.add(e);
-                            boundElem4Atom.put(e.atomName(), e);
-                            loneSig.put(e.atomName(), new Sig.PrimSig(e.atomName(), (PrimSig) e.s, Attr.LONE));
+                        if (instanceOf(be, s)) {
+                            lower.add(be);
+                            boundElem4Atom.put(be.atomName(), be);
+                            PrimSig atom = new Sig.PrimSig(be.atomName(), (PrimSig) be.s, Attr.LONE);
+                            loneSig.put(be.atomName(), atom);
+                            put(atomsPerSig, s, atom);
+                            be.expr = atom;
                         }
                     }
                 }
@@ -368,6 +373,7 @@ public class Minimizer {
                             e.f = f;
                             // TODO check that this always works to look up atoms by name
                             // TODO consider creating tuples based on new signatures here
+                            // doesn't work in predicate based approach?
                             e.t = t;
                             lower.add(e);
                         }
@@ -407,25 +413,96 @@ public class Minimizer {
                             upper.add(es);
                             // add as lone sig in case it is needed later
                             if (loneSig.get(es.atomName()) == null) {
-                                loneSig.put(es.atomName(), new Sig.PrimSig(es.atomName(), (PrimSig) es.s, Attr.LONE));
+                                PrimSig atomOfSig = new Sig.PrimSig(es.atomName(), (PrimSig) es.s, Attr.LONE);
+                                loneSig.put(es.atomName(), atomOfSig);
+                                put(atomsPerSig, s, atomOfSig);
+                                es.expr = atomOfSig;
+                            } else {
+                                es.expr = loneSig.get(es.atomName());
                             }
                             System.out.println("added UB lone atom " + es.atomName);
                         } else {
                             System.out.println("ignoring UB atom " + es.atomName + " from instance");
                         }
                     }
-                    // TODO build the whole UB also including tuples
-
+                }
+            }
+            // iterate a second time for all fields (now all atoms exist
+            for (Sig s : ans.getAllReachableSigs()) {
+                if (isRelevant(s)) {
+                    // build the whole UB also including tuples
                     for (Field f : s.getFields()) {
-                        BoundElement ef = new BoundElement();
-                        ef.f = f;
-                        upper.add(ef);
+                        for (ProductType pt : f.type()) {
+                            for (Expr tuple : generateTuples(pt)) {
+                                BoundElement ef = new BoundElement();
+                                ef.f = f;
+                                ef.expr = tuple;
+                                // FIXME check whether this really works when tuples are given by expressions
+                                if (!isInInstance(ef)) {
+                                    upper.add(ef);
+                                }
+                            }
+                        }
                     }
                 }
             }
         }
         // remember initial value of upper bound
         upperOrig = new ArrayList<Minimizer.BoundElement>(upper);
+    }
+
+    private List<Expr> generateTuples(ProductType pt) {
+        List<Expr> exprs = new ArrayList<>();
+        for (int i = 0; i < pt.arity(); i++) {
+            List<Expr> exprsExt = new ArrayList<>();
+            PrimSig sig = pt.get(i);
+            List<Expr> atoms = getPossibleAtoms(sig);
+            for (Expr atom : atoms) {
+                for (Expr tuple : exprs) {
+                    product(tuple, atom);
+                }
+                if (exprs.isEmpty()) {
+                    exprsExt.add(atom);
+                }
+            }
+            exprs = exprsExt;
+        }
+        return exprs;
+    }
+
+    /**
+     * retrieves the possible atoms of this sig for the special case here where
+     * atoms are represented by lone or one sigs
+     *
+     * @param sig
+     * @return
+     */
+    private List<Expr> getPossibleAtoms(PrimSig sig) {
+        List<Expr> atoms = new ArrayList<>();
+        if (sig == Sig.UNIV) {
+            throw new RuntimeException("UNIV atoms not calculated yet");
+        }
+        for (PrimSig child : sig.children()) {
+            atoms.addAll(getPossibleAtoms(child));
+        }
+        if (sig.children().isEmpty()) {
+            if (sig.isLone != null || sig.isOne != null) {
+                atoms.add(sig);
+            } else {
+                throw new RuntimeException("sig " + sig.label + " not handled yet");
+            }
+        }
+
+        return atoms;
+    }
+
+    private <E, F> void put(Map<E,List<F>> map, E key, F elem) {
+        List<F> list = map.get(key);
+        if (list == null) {
+            list = new ArrayList<>();
+            map.put(key, list);
+        }
+        list.add(elem);
     }
 
     /**
