@@ -341,6 +341,8 @@ public class Minimizer {
      * @param ans
      */
     private void initBounds(A4Solution ans) {
+        Map<Sig,List<BoundElement>> atomsPerSig = new LinkedHashMap<>();
+
         // lower bounds are exact tuples
         for (Sig s : ans.getAllReachableSigs()) {
             if (isRelevant(s)) {
@@ -356,6 +358,8 @@ public class Minimizer {
                         if (instanceOf(e, s)) {
                             lower.add(e);
                             boundElem4Atom.put(e.atomName(), e);
+                            // FIXME two sigs per atom are not good when creating tuples for fields!
+                            // idea: change it here to lone and change generation of lower bounds!
                             oneSig.put(e.atomName(), new Sig.PrimSig(e.atomName(), (PrimSig) e.s, Attr.ONE));
                             loneSig.put(e.atomName(), new Sig.PrimSig(e.atomName(), (PrimSig) e.s, Attr.LONE));
                         }
@@ -366,6 +370,8 @@ public class Minimizer {
                         if (t != null) {
                             BoundElement e = new BoundElement();
                             e.f = f;
+                            // TODO check that this always works to look up atoms by name
+                            // TODO consider creating tuples based on new signatures here
                             e.t = t;
                             lower.add(e);
                         }
@@ -413,6 +419,7 @@ public class Minimizer {
                         }
                     }
                     // TODO build the whole UB also including tuples
+
                     for (Field f : s.getFields()) {
                         BoundElement ef = new BoundElement();
                         ef.f = f;
