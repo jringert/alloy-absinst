@@ -4,6 +4,7 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashMap;
 import java.util.LinkedHashMap;
+import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
@@ -16,6 +17,7 @@ import edu.mit.csail.sdg.ast.Attr;
 import edu.mit.csail.sdg.ast.Command;
 import edu.mit.csail.sdg.ast.Decl;
 import edu.mit.csail.sdg.ast.Expr;
+import edu.mit.csail.sdg.ast.ExprBinary;
 import edu.mit.csail.sdg.ast.ExprConstant;
 import edu.mit.csail.sdg.ast.ExprList;
 import edu.mit.csail.sdg.ast.ExprQt;
@@ -102,7 +104,7 @@ public class Minimizer {
             if (atomName != null) {
                 return true;
             }
-            return t.arity() == 1;
+            return (t != null && t.arity() == 1);
         }
 
         String atomName() {
@@ -437,7 +439,6 @@ public class Minimizer {
                                 BoundElement ef = new BoundElement();
                                 ef.f = f;
                                 ef.expr = tuple;
-                                // FIXME check whether this really works when tuples are given by expressions
                                 if (!isInInstance(ef)) {
                                     upper.add(ef);
                                 }
@@ -459,7 +460,7 @@ public class Minimizer {
             List<Expr> atoms = getPossibleAtoms(sig);
             for (Expr atom : atoms) {
                 for (Expr tuple : exprs) {
-                    product(tuple, atom);
+                    exprsExt.add(product(tuple, atom));
                 }
                 if (exprs.isEmpty()) {
                     exprsExt.add(atom);
@@ -532,10 +533,38 @@ public class Minimizer {
             }
         } else {
             for (BoundElement e : instance) {
-                if (!e.isAtom() && e.f.label.equals(es.f.label) && sameTuple(e.t, es.t)) {
-                    return true;
+                if (!e.isAtom() && e.f.label.equals(es.f.label)) {
+                    if (es.t != null && sameTuple(e.t, es.t)) {
+                        return true;
+                    } else if (es.expr != null && sameTuple(e.t, es.expr)) {
+                        return true;
+                    }
                 }
             }
+        }
+        return false;
+    }
+
+    private boolean sameTuple(A4Tuple t, Expr expr) {
+        if (expr instanceof ExprBinary && ExprBinary.Op.ARROW.equals(((ExprBinary) expr).op)) {
+            // TODO check atoms in expr
+            LinkedList<Sig> atomsInExpr = new LinkedList<>();
+            while (expr instanceof ExprBinary) {
+                ExprBinary exprB = (ExprBinary) expr;
+                atomsInExpr.addFirst((Sig) exprB.right);
+                expr = exprB.left;
+            }
+            atomsInExpr.addFirst((Sig) expr);
+
+            if (t.arity() != atomsInExpr.size()) {
+                return false;
+            }
+            for (int i = 0; i < t.arity(); i++) {
+                if (!t.atom(i).equals(atomsInExpr.get(i).label)) {
+                    return false;
+                }
+            }
+            return true;
         }
         return false;
     }
@@ -725,48 +754,6 @@ public class Minimizer {
 
             // TODO do something similar for fields
 
-            //
-            //            Map<Sig,Expr> atomsForSig = new LinkedHashMap<>();
-            //            for (BoundElement e : upper) {
-            //                if (e.isAtom()) {
-            //                    Expr atMost = atomsForSig.get(e.s);
-            //                    PrimSig s = oneSig.get(e.atomName());
-            //                    if (!cmdSigs.contains(s)) {
-            //                        // switch to the lone version for upper bound
-            //                        s = loneSig.get(e.atomName());
-            //                        cmdSigs.add(s);
-            //                    }
-            //                    if (atMost == null) {
-            //                        atMost = s;
-            //                    } else {
-            //                        atMost = atMost.plus(s);
-            //                    }
-            //                    atomsForSig.put(e.s, atMost);
-            //                }
-            //            }
-            //            for (Sig s : atomsForSig.keySet()) {
-            //                upperBound = boundSigOrFieldNotContainElems(upperBound, s, atomsForSig.get(s));
-            //
-            //                //FIXME there is still an issue here: when the lower bound is removed the corresponding atoms would need to be added as lone
-            //                Expr atMost = null;
-            //                for (Sig c : cmdSigs) {
-            //                    // collect all children of s
-            //                    if (c instanceof PrimSig) {
-            //                        if (((PrimSig) c).parent == s) {
-            //                            if (atMost == null) {
-            //                                atMost = c;
-            //                            } else {
-            //                                atMost = atMost.plus(c);
-            //                            }
-            //                        }
-            //                    }
-            //                }
-            //                if (upperBound == null) {
-            //                    upperBound = atMost;
-            //                } else if (atMost != null) {
-            //                    upperBound = upperBound.and(s.equal(atMost));
-            //                }
-            //            }
 
         }
 
@@ -832,34 +819,6 @@ public class Minimizer {
         return e1.product(e2);
     }
 
-    /**
-     * extends upperBound with a conjunct where SoF = SoF - elems (this is better
-     * than "elems not in SoF" as the latter would require the existence of all
-     * atoms in elems)
-     *
-     * @param upperBound existing UB constraints (initialized if null)
-     * @param sof signature or field to apply bound for
-     * @param badElems union of elements to be removed from UB
-     * @return
-     */
-    private Expr boundSigOrFieldNotContainElems(Expr upperBound, Expr sof, Expr badElems) {
-
-        Expr bound = null;
-        // there might not have been an atom/tuple in the instance so upper bound is empty set
-        if (badElems == null) {
-            // no removals
-            bound = null;
-        } else {
-            // we remove all bad atoms
-            bound = sof.equal(sof.minus(badElems));
-        }
-        if (upperBound == null) {
-            upperBound = bound;
-        } else {
-            upperBound = upperBound.and(bound);
-        }
-        return upperBound;
-    }
 
     private Expr addFieldUBFromInstance(List<Sig> cmdSigs, Expr upperBound, BoundElement e) {
         Expr atMost = null;
