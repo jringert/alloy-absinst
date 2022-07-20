@@ -547,14 +547,7 @@ public class Minimizer {
 
     private boolean sameTuple(A4Tuple t, Expr expr) {
         if (expr instanceof ExprBinary && ExprBinary.Op.ARROW.equals(((ExprBinary) expr).op)) {
-            // TODO check atoms in expr
-            LinkedList<Sig> atomsInExpr = new LinkedList<>();
-            while (expr instanceof ExprBinary) {
-                ExprBinary exprB = (ExprBinary) expr;
-                atomsInExpr.addFirst((Sig) exprB.right);
-                expr = exprB.left;
-            }
-            atomsInExpr.addFirst((Sig) expr);
+            LinkedList<Sig> atomsInExpr = atomsInProduct(expr);
 
             if (t.arity() != atomsInExpr.size()) {
                 return false;
@@ -567,6 +560,23 @@ public class Minimizer {
             return true;
         }
         return false;
+    }
+
+    /**
+     * given a product expression extract all atoms
+     *
+     * @param expr
+     * @return
+     */
+    private LinkedList<Sig> atomsInProduct(Expr expr) {
+        LinkedList<Sig> atomsInExpr = new LinkedList<>();
+        while (expr instanceof ExprBinary) {
+            ExprBinary exprB = (ExprBinary) expr;
+            atomsInExpr.addFirst((Sig) exprB.right);
+            expr = exprB.left;
+        }
+        atomsInExpr.addFirst((Sig) expr);
+        return atomsInExpr;
     }
 
     /**
@@ -685,6 +695,7 @@ public class Minimizer {
                     Expr s = retrieveAtomExpr(e.t.atom(i));
                     tuple = product(tuple, s);
                     // reject tuple if sig is missing
+                    // INFO this is a deliberate decision as there will be a larger set "lower" for all possible tuples (larges is the instance itself)
                     if (!hasAtom(lower, e.t.atom(i))) {
                         sigMissingAndTupleInvalid = true;
                         // stop handling this tuple (inner loop)
@@ -708,15 +719,13 @@ public class Minimizer {
                 }
             }
         } else if (UBKind.EXACT.equals(ubKind)) {
-            // add lones for instance not in lower bound
+            // add lones for atoms in instance not in lower bound
             for (BoundElement e : instance) {
                 if (e.isAtom()) {
                     PrimSig s = loneSig.get(e.atomName());
                     if (!cmdSigs.contains(s)) {
                         cmdSigs.add(s);
                     }
-                } else {
-                    // TODO handle tuples in a similar way
                 }
             }
 
@@ -724,10 +733,11 @@ public class Minimizer {
             List<BoundElement> l = new ArrayList<>(upperOrig);
             l.removeAll(upper);
             for (Sig s : sigsOrig) {
-                // for every relevant sig collect max atoms
+                // for every relevant sig s collect max atoms
                 if (isRelevant(s)) {
                     Expr max = null;
-                    // iterate over children and atom sigs
+                    // iterate over existing children and atom sigs of s (from original
+                    // module or lower bound)
                     for (Sig child : cmdSigs) {
                         if (child instanceof PrimSig) {
                             if (((PrimSig) child).parent == s) {
@@ -735,7 +745,7 @@ public class Minimizer {
                             }
                         }
                     }
-                    // add also upper bound stuff
+                    // add also upper bound elements to max and add them as lone sigs
                     for (BoundElement e : l) {
                         if (e.isAtom() && e.s == s) {
                             Sig atom = loneSig.get(e.atomName);
@@ -753,7 +763,51 @@ public class Minimizer {
             }
 
             // TODO do something similar for fields
+            for (Sig s : sigsOrig) {
+                // for every relevant sig s collect max atoms
+                if (isRelevant(s)) {
+                    for (Field f : s.getFields()) {
+                        Expr max = null;
 
+                        // add tuples that are in instance (including lower bound)
+                        for (BoundElement e : instance) {
+                            if (!e.isAtom() && e.f == f) {
+                                Expr tuple = null;
+                                boolean sigMissingAndTupleInvalid = false;
+                                for (int i = 0; i < e.t.arity(); i++) {
+                                    Expr atom = retrieveAtomExpr(e.t.atom(i));
+                                    tuple = product(tuple, atom);
+                                    // reject tuple if sig is missing
+                                    // INFO this is a deliberate decision as we don't want to restrict tuples in addition to atoms
+                                    if (!hasSigForAtom(cmdSigs, e.t.atom(i))) {
+                                        sigMissingAndTupleInvalid = true;
+                                        // stop handling this tuple (inner loop)
+                                        break;
+                                    }
+                                }
+                                if (!sigMissingAndTupleInvalid && tuple != null) {
+                                    max = plus(max, tuple);
+                                }
+                            }
+                        }
+
+                        // add also upper bound elements to max
+                        for (BoundElement e : l) {
+                            if (!e.isAtom() && e.f == f) {
+                                if (mightHaveAtoms(e.expr, cmdSigs)) {
+                                    max = plus(max, e.expr);
+                                }
+                            }
+                        }
+                        // set max of field
+                        if (max == null) {
+                            upperBound = and(upperBound, f.no());
+                        } else {
+                            upperBound = and(upperBound, f.in(max));
+                        }
+                    }
+                }
+            }
 
         }
 
@@ -769,6 +823,17 @@ public class Minimizer {
             f = f.and(upperBound);
         }
         return cmd.change(f);
+    }
+
+    /**
+     * checks whether the cmdSigs allow for all atoms in the product expression to
+     * be instantiated
+     *
+     * @param expr
+     * @param cmdSigs
+     */
+    private boolean mightHaveAtoms(Expr expr, List<Sig> cmdSigs) {
+        return cmdSigs.containsAll(atomsInProduct(expr));
     }
 
     /**
@@ -1042,6 +1107,13 @@ public class Minimizer {
         return l.stream().filter(p -> p.isAtom()).collect(Collectors.toList());
     }
 
+    /**
+     * check if atom is built in or can be instantiated with given sigs in bound
+     *
+     * @param bound
+     * @param atom
+     * @return
+     */
     private boolean hasAtom(List<BoundElement> bound, String atom) {
         // if it is not a signature it is always present
         if (!(retrieveAtomExpr(atom) instanceof PrimSig)) {
@@ -1049,6 +1121,26 @@ public class Minimizer {
         }
         for (BoundElement be : bound) {
             if (atom.equals(be.atomName())) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    /**
+     * check if atom is built in or can be instantiated with given sigs
+     *
+     * @param cmdSigs
+     * @param atom
+     * @return
+     */
+    private boolean hasSigForAtom(List<Sig> cmdSigs, String atom) {
+        // if it is not a signature it is always present
+        if (!(retrieveAtomExpr(atom) instanceof PrimSig)) {
+            return true;
+        }
+        for (Sig sig : cmdSigs) {
+            if (atom.equals(sig.label)) {
                 return true;
             }
         }
