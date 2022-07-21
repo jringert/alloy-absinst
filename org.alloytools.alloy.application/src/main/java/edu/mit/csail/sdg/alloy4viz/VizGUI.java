@@ -224,6 +224,7 @@ public final class VizGUI implements ComponentListener {
     //For abstract instance display and minimizing instances
     private CompModule          world           = null;
     private Command             cmd             = null;
+    private String              enumerationXML  = null;
 
     /**
      * Returns the current visualization settings (and you can call
@@ -1841,6 +1842,12 @@ public final class VizGUI implements ComponentListener {
             OurDialog.alert(frame, "Cannot display the next solution since the analysis engine is not loaded with the visualizer.");
         } else {
             try {
+                if (enumerationXML != null) {
+                    xmlFileName = enumerationXML;
+                    String defaultTheme = System.getProperty("alloy.theme0");
+                    for (VizState myState : myStates)
+                        myState.resetTheme();
+                }
                 enumerator.compute(new String[] {
                                                  xmlFileName, -3 + ""
                 });
@@ -2067,6 +2074,7 @@ public final class VizGUI implements ComponentListener {
     @SuppressWarnings("restriction" )
     public Runner doShowMinimize() {
         if (!wrap) {
+            enumerationXML = xmlFileName;
             A4Solution inst = myStates.get(statepanes - 1).getOriginalInstance().originalA4;
             CompModule world = this.world;
             Command command = cmd;
