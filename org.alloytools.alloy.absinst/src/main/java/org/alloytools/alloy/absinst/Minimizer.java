@@ -411,7 +411,7 @@ public class Minimizer {
             upper.clear(); // not really necessary, more of a symbolic act
         } else if (UBKind.EXACT.equals(ubKind)) {
             for (Sig s : ans.getAllReachableSigs()) {
-                if (isRelevant(s)) {
+                if (isRelevant(s) && s.isAbstract == null) {
                     int atomNum = 0;
                     for (String atom : getAtoms(s, boundMsg)) {
                         BoundElement es = new BoundElement();

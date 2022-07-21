@@ -8,6 +8,19 @@ import org.junit.Test;
 public class MinimizerBasicAtomsTest {
 
     @Test
+    public void testAbstractAExact() {
+        String module = "src/test/alloy/basic/abstractA.als";
+
+        int cmdNum = 0;
+
+        Minimizer m = MinimizerUtil.testMin(module, cmdNum, UBKind.EXACT);
+
+        assertEquals("[]", m.getLowerBound().toString());
+        assertEquals("[]", m.printUpperBound());
+    }
+
+
+    @Test
     public void testOneARun() {
         String module = "src/test/alloy/basic/oneA.als";
 
