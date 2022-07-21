@@ -28,7 +28,7 @@ public class MinimizerBasicAtomsTest {
         Minimizer m = MinimizerUtil.testMin(module, cmdNum, UBKind.EXACT);
 
         assertEquals("[A$0]", m.getLowerBound().toString());
-        assertEquals("[]", m.getUpperBound().toString());
+        assertEquals("[this/A ∌ A$1, A$2, ]", m.printUpperBound());
     }
 
     @Test
@@ -52,7 +52,7 @@ public class MinimizerBasicAtomsTest {
         Minimizer m = MinimizerUtil.testMin(module, cmdNum, UBKind.EXACT);
 
         assertEquals("[A$0]", m.getLowerBound().toString());
-        assertEquals("[A$1, A$2]", m.getUpperBound().toString());
+        assertEquals("[]", m.printUpperBound());
     }
 
 
@@ -77,7 +77,7 @@ public class MinimizerBasicAtomsTest {
         Minimizer m = MinimizerUtil.testMin(module, cmdNum, UBKind.EXACT);
 
         assertEquals("[A$0, A$1]", m.getLowerBound().toString());
-        assertEquals("[]", m.getUpperBound().toString());
+        assertEquals("[this/A ∌ A$2, ]", m.printUpperBound());
     }
 
 
