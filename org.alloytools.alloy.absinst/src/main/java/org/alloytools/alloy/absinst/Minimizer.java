@@ -180,10 +180,10 @@ public class Minimizer {
             Command cmdSanity = null;
             if (low) {
                 cmdWithBounds = addBounds(negatePred(cmdOrig), candidate, upper, cmdSigs);
-                cmdSanity = addBounds(cmdOrig, candidate, upper, new ArrayList<>());
+                cmdSanity = addBounds(cmdOrig, candidate, upper, new ArrayList<>(sigsOrig));
             } else {
                 cmdWithBounds = addBounds(negatePred(cmdOrig), lower, candidate, cmdSigs);
-                cmdSanity = addBounds(cmdOrig, lower, candidate, new ArrayList<>());
+                cmdSanity = addBounds(cmdOrig, lower, candidate, new ArrayList<>(sigsOrig));
             }
 
             A4Solution ansSanity = TranslateAlloyToKodkod.execute_command(rep, cmdSigs, cmdSanity, optOrig);

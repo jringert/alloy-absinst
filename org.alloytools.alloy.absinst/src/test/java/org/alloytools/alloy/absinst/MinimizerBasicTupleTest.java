@@ -54,4 +54,16 @@ public class MinimizerBasicTupleTest {
 
     }
 
+    @Test
+    public void testTupleInheritanceExact() {
+        String module = "src/test/alloy/basic/tupleInheritance.als";
+
+        int cmdNum = 0;
+
+        Minimizer m = MinimizerUtil.testMin(module, cmdNum, UBKind.EXACT);
+
+        assertEquals("[]", m.getLowerBound().toString());
+        assertEquals("[this/A ∌ A$0, A$1, A$2, ]", m.printUpperBound());
+    }
+
 }
