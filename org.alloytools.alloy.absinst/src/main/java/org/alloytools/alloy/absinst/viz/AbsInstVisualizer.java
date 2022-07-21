@@ -11,7 +11,6 @@ import org.alloytools.alloy.absinst.Minimizer;
 import edu.mit.csail.sdg.alloy4.A4Reporter;
 import edu.mit.csail.sdg.alloy4.ErrorFatal;
 import edu.mit.csail.sdg.alloy4.ErrorWarning;
-import edu.mit.csail.sdg.alloy4viz.VizGUI;
 import edu.mit.csail.sdg.ast.Command;
 import edu.mit.csail.sdg.parser.CompModule;
 import edu.mit.csail.sdg.parser.CompUtil;
@@ -52,7 +51,7 @@ public class AbsInstVisualizer {
         if (out.checkError())
             throw new ErrorFatal("Error writing the solution XML file.");
 
-        VizGUI viz = new VizGUI(false, "src/test/inst/inst1.xml", null);
-        viz.loadThemeFile("src/test/inst/inst1_greyYellow.thm");
+        //        VizGUI viz = new VizGUI(false, "src/test/inst/inst1.xml", null);
+        //        viz.loadThemeFile("src/test/inst/inst1_greyYellow.thm");
     }
 }

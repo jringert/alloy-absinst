@@ -11,7 +11,6 @@ import org.alloytools.alloy.absinst.Minimizer;
 import edu.mit.csail.sdg.alloy4.A4Reporter;
 import edu.mit.csail.sdg.alloy4.ErrorFatal;
 import edu.mit.csail.sdg.alloy4.ErrorWarning;
-import edu.mit.csail.sdg.alloy4viz.VizGUI;
 import edu.mit.csail.sdg.ast.Command;
 import edu.mit.csail.sdg.ast.Sig;
 import edu.mit.csail.sdg.ast.Sig.Field;
@@ -59,8 +58,8 @@ public class AbsInstVisualizerWithInstance {
         PrintWriter out_theme = new PrintWriter("absOI.thm");
         AbstWriterWithInstance.writeTheme(instance, out_theme, lowerSig, lowerField);
 
-        VizGUI viz = new VizGUI(false, "absOI.xml", null);
-        viz.loadThemeFile("absOI.thm");
+        //        VizGUI viz = new VizGUI(false, "absOI.xml", null);
+        //        viz.loadThemeFile("absOI.thm");
     }
 }
 

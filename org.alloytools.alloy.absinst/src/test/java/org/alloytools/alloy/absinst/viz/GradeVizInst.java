@@ -11,7 +11,6 @@ import org.alloytools.alloy.absinst.Minimizer;
 import edu.mit.csail.sdg.alloy4.A4Reporter;
 import edu.mit.csail.sdg.alloy4.ErrorFatal;
 import edu.mit.csail.sdg.alloy4.ErrorWarning;
-import edu.mit.csail.sdg.alloy4viz.VizGUI;
 import edu.mit.csail.sdg.ast.Command;
 import edu.mit.csail.sdg.ast.Sig;
 import edu.mit.csail.sdg.ast.Sig.Field;
@@ -60,7 +59,7 @@ public class GradeVizInst {
 
         //This hangs
         //This also seems to have some state issues where the first time I run it, it does not load the theme in or update once loading the theme in
-        VizGUI viz = new VizGUI(true, System.getProperty("user.dir") + "/src/test/inst/gradeWInst.xml", null);
-        viz.loadThemeFile(System.getProperty("user.dir") + "/src/test/inst/gradeWInst.thm");
+        //        VizGUI viz = new VizGUI(true, System.getProperty("user.dir") + "/src/test/inst/gradeWInst.xml", null);
+        //        viz.loadThemeFile(System.getProperty("user.dir") + "/src/test/inst/gradeWInst.thm");
     }
 }
