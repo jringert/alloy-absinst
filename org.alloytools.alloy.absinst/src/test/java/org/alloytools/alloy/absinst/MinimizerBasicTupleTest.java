@@ -28,7 +28,7 @@ public class MinimizerBasicTupleTest {
         Minimizer m = MinimizerUtil.testMin(module, cmdNum, UBKind.EXACT);
 
         assertEquals("[A$0, A$1, A$0->A$1, A$1->A$0]", m.getLowerBound().toString());
-        assertEquals("[UB for field (this/A <: nx)]", m.getUpperBound().toString());
+        assertEquals("[field (this/A <: nx) ∌ A$0 -> A$0, A$1 -> A$1, ]", m.printUpperBound());
     }
 
 }

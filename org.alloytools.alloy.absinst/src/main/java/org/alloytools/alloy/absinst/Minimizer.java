@@ -121,6 +121,8 @@ public class Minimizer {
             }
             if (t != null) {
                 return t.toString();
+            } else if (expr != null) {
+                return expr.toString();
             } else if (s != null) {
                 return "UB for " + s.toString();
             } else {
@@ -1158,6 +1160,26 @@ public class Minimizer {
             return tmp;
         }
         return this.upper;
+    }
+
+    public String printUpperBound() {
+        if (UBKind.EXACT.equals(ubKind)) {
+            Map<Object,String> restriction = new LinkedHashMap<>();
+            for (BoundElement be : upper) {
+                Object key = be.s;
+                if (key == null) {
+                    key = be.f;
+                }
+                String res = restriction.get(key);
+                if (res == null) {
+                    res = key + " ∌ ";
+                }
+                res += be + ", ";
+                restriction.put(key, res);
+            }
+            return restriction.values().toString();
+        }
+        return getUpperBound().toString();
     }
 
     public ConstList<Sig> getSigsOrig() {
