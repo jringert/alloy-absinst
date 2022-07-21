@@ -290,6 +290,10 @@ public class Minimizer {
         TranslateAlloyToKodkod.execute_command(rep, this.sigsOrig, cmd, opt);
         initBounds(ans);
 
+        if (!ans.satisfiable()) {
+            return;
+        }
+
         {
             // sanity check that within given bounds we have some valid instance
             ArrayList<Sig> sigsSanity = new ArrayList<>(this.sigsOrig);
@@ -491,6 +495,13 @@ public class Minimizer {
         if (sig.children().isEmpty()) {
             if (sig.isLone != null || sig.isOne != null) {
                 atoms.add(sig);
+            } else if ("seq/Int".equals(sig.label)) {
+                for (ExprVar exprVar : instOrig.getAllAtoms()) {
+                    if (exprVar.type().is_int()) {
+                        int i = Integer.parseInt(exprVar.label);
+                        atoms.add(ExprConstant.makeNUMBER(i));
+                    }
+                }
             } else {
                 throw new RuntimeException("sig " + sig.label + " not handled yet");
             }
@@ -609,9 +620,10 @@ public class Minimizer {
      */
     private String[] getAtoms(Sig s, String bound) {
         for (String line : bound.split("\n")) {
-            String ini = "Sig " + s.label + " in ";
-            if (line.startsWith(ini)) {
-                line = line.substring(ini.length());
+            String ini1 = "Sig " + s.label + " in ";
+            String ini2 = "Sig " + s.label + " == ";
+            if (line.startsWith(ini1) || line.startsWith(ini2)) {
+                line = line.substring(ini1.length());
                 line = line.replaceAll("\\[", "");
                 line = line.replaceAll("\\]", "");
                 return line.split(", ");
