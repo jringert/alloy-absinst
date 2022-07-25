@@ -8,9 +8,9 @@ testsrc:      			src/test/java
 testbin:      			target/test-classes
 target-dir:   			target
 
-javac.source:           1.8
-javac.target:           1.8
-javac.compliance:       1.8
+javac.source:           1.11
+javac.target:           1.11
+javac.compliance:       1.11
 javac.debug:            on
 
 Git-Descriptor:         	${system-allow-fail;git describe --dirty --always}
