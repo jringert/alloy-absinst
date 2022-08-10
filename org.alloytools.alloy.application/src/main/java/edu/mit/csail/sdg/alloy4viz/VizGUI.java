@@ -72,6 +72,7 @@ import javax.swing.JPopupMenu;
 import javax.swing.JScrollPane;
 import javax.swing.JSplitPane;
 import javax.swing.JTextArea;
+import javax.swing.JTextPane;
 import javax.swing.JToolBar;
 import javax.swing.ScrollPaneConstants;
 import javax.swing.WindowConstants;
@@ -228,6 +229,7 @@ public final class VizGUI implements ComponentListener {
     private Command             cmd             = null;
     private String              enumerationXML  = null;
     private A4Options           opt             = null;
+    private String              upperbound_stmt = null;
 
     /**
      * Returns the current visualization settings (and you can call
@@ -1019,14 +1021,13 @@ public final class VizGUI implements ComponentListener {
                                 } else {
                                     AlloyInstance myInstance = StaticInstanceReader.parseInstance(f, current + i);
 
-
-
                                     if (getVizState().get(i) != null)
                                         getVizState().get(i).loadInstance(myInstance);
                                     else {
                                         getVizState().set(i, new VizState(getVizState().get(statepanes - 1))); // [electrum] get the previous state (including theme)
                                         getVizState().get(i).loadInstance(myInstance);
                                     }
+
 
 
                                 }
@@ -1071,7 +1072,32 @@ public final class VizGUI implements ComponentListener {
         instanceTopBox.add(toolbar);
         final JPanel instanceArea = new JPanel(new BorderLayout());
         instanceArea.add(instanceTopBox, BorderLayout.NORTH);
-        instanceArea.add(content, BorderLayout.CENTER);
+
+
+        if (enumerationXML != null) {
+            JSplitPane content_withUB = new JSplitPane(JSplitPane.VERTICAL_SPLIT);
+            content_withUB.setOneTouchExpandable(false);
+            content_withUB.setResizeWeight(0.);
+            content_withUB.setContinuousLayout(true);
+            content_withUB.setBorder(null);
+            ((BasicSplitPaneUI) (content_withUB.getUI())).getDivider().setBorder(new OurBorder(false, true, false, false));
+
+            JTextPane ub_text = new JTextPane();
+            ub_text.setContentType("text/html");
+            ub_text.setText(upperbound_stmt);
+
+            content_withUB.setTopComponent(content);
+            content_withUB.setBottomComponent(ub_text);
+            content_withUB.setDividerLocation(frame.getHeight() / 2);
+
+            instanceArea.add(content_withUB, BorderLayout.CENTER);
+
+        } else {
+            instanceArea.add(content, BorderLayout.CENTER);
+        }
+
+
+
         instanceArea.setVisible(true);
         if (!Util.onMac()) {
             instanceTopBox.setBackground(background);
@@ -2098,6 +2124,8 @@ public final class VizGUI implements ComponentListener {
         if (!wrap) {
 
             minButton.setEnabled(false);
+            currentMode = VisualizerMode.Viz;
+
             enumerationXML = xmlFileName;
             A4Solution inst = myStates.get(statepanes - 1).getOriginalInstance().originalA4;
             Command command = cmd;
@@ -2108,18 +2136,24 @@ public final class VizGUI implements ComponentListener {
             UBKind ub;
             if (ub_selection == 0) {
                 ub = UBKind.NO_UPPER;
+                upperbound_stmt = "<html><b>Upper bound selection: </b> none<br><br>";
             } else if (ub_selection == 1) {
                 ub = UBKind.INSTANCE;
+                upperbound_stmt = "<html><b>Upper bound selection: </b> instance<br><br>";
             } else if (ub_selection == 2) {
                 ub = UBKind.INSTANCE_OR_NO_UPPER;
+                upperbound_stmt = "<html><b>Upper bound selection: </b> instance or none<br><br>";
             } else {
                 ub = UBKind.EXACT;
+                upperbound_stmt = "<html><b>Upper bound selection: </b> exact<br><br>";
             }
 
             int display_selection = minDisplay.get();
 
             Minimizer m = new Minimizer();
             m.minimize(world, command, inst, opt, ub);
+
+            upperbound_stmt += "<b>UB = </b>" + m.getUpperBound().toString();
 
             inst = m.getInstOrig();
             HashMap<A4Tuple,String> lower = m.getLowerBoundOriginMap();
