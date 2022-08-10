@@ -909,6 +909,15 @@ public final class VizGUI implements ComponentListener {
         vizButton.setVisible(frame != null);
         treeButton.setVisible(frame != null);
         txtButton.setVisible(frame != null);
+        minButton.setVisible(frame != null);
+
+        if (enumerationXML != null) {
+            minButton.setEnabled(false);
+        }
+        else {
+            minButton.setEnabled(true);
+        }
+
         // dotButton.setVisible(frame!=null);
         // xmlButton.setVisible(frame!=null);
         magicLayout.setVisible((settingsOpen == 0 || settingsOpen == 1) && currentMode == VisualizerMode.Viz);
@@ -1376,6 +1385,7 @@ public final class VizGUI implements ComponentListener {
 
         if (enumerationXML != null) {
             xmlFileName = enumerationXML;
+            enumerationXML = null;
             String defaultTheme = System.getProperty("alloy.theme0");
             for (VizState myState : myStates)
                 myState.resetTheme();
@@ -1855,6 +1865,7 @@ public final class VizGUI implements ComponentListener {
             try {
                 if (enumerationXML != null) {
                     xmlFileName = enumerationXML;
+                    enumerationXML = null;
                     String defaultTheme = System.getProperty("alloy.theme0");
                     for (VizState myState : myStates)
                         myState.resetTheme();
@@ -2085,6 +2096,8 @@ public final class VizGUI implements ComponentListener {
     @SuppressWarnings("restriction" )
     public Runner doShowMinimize() {
         if (!wrap) {
+
+            minButton.setEnabled(false);
             enumerationXML = xmlFileName;
             A4Solution inst = myStates.get(statepanes - 1).getOriginalInstance().originalA4;
             Command command = cmd;
