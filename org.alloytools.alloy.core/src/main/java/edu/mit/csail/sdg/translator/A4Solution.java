@@ -1749,6 +1749,41 @@ public final class A4Solution {
 
     // ===================================================================================================//
 
+    public String executableExpr() {
+        String print_sig = "";
+        String print_rel = "";
+        String print_disj = "";
+        String and = "";
+        for (Sig s : sigs) {
+            if (!s.builtin) {
+                String label = s.label;
+                if (label.startsWith("this/"))
+                    label = label.substring(5);
+                String temp = eval(s, -1).toString();
+                temp = temp.substring(1, temp.length() - 1);
+                temp = temp.replaceAll("\\$", "");
+                if (temp.length() == 0)
+                    temp = "none";
+                print_disj += " some disj " + temp + " : " + label + " | ";
+                print_sig += and + label + " = " + temp.replaceAll(",", " +");
+                and = " and ";
+
+                for (Field f : s.getFields()) {
+                    label = f.label;
+                    if (label.startsWith("this/"))
+                        label = label.substring(5);
+                    temp = eval(f, -1).toString();
+                    temp = temp.replaceAll("\\$", "");
+                    temp = temp.substring(1, temp.length() - 1);
+                    if (temp.length() == 0)
+                        temp = "none";
+                    print_rel += and + label + " = " + temp.replaceAll(",", " +");
+                }
+            }
+        }
+        return print_disj + " { " + print_sig + print_rel + " } ";
+    }
+
     /** This caches the toString() output. */
     // [electrum] cache per state
     private final Map<Integer,String> toStringCache = new HashMap<Integer,String>();
