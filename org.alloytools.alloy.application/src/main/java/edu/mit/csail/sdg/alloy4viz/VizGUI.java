@@ -106,10 +106,12 @@ import edu.mit.csail.sdg.ast.ExprVar;
 import edu.mit.csail.sdg.ast.Sig;
 import edu.mit.csail.sdg.ast.Sig.Field;
 import edu.mit.csail.sdg.parser.CompModule;
+import edu.mit.csail.sdg.parser.CompUtil;
 import edu.mit.csail.sdg.translator.A4Options;
 import edu.mit.csail.sdg.translator.A4Solution;
 import edu.mit.csail.sdg.translator.A4Tuple;
 import edu.mit.csail.sdg.translator.A4TupleSet;
+import edu.mit.csail.sdg.translator.TranslateAlloyToKodkod;
 
 /**
  * GUI main window for the visualizer.
@@ -225,6 +227,7 @@ public final class VizGUI implements ComponentListener {
     private CompModule          world           = null;
     private Command             cmd             = null;
     private String              enumerationXML  = null;
+    private A4Options           opt             = null;
 
     /**
      * Returns the current visualization settings (and you can call
@@ -1370,6 +1373,14 @@ public final class VizGUI implements ComponentListener {
     private Runner doClose() {
         if (wrap)
             return wrapMe();
+
+        if (enumerationXML != null) {
+            xmlFileName = enumerationXML;
+            String defaultTheme = System.getProperty("alloy.theme0");
+            for (VizState myState : myStates)
+                myState.resetTheme();
+        }
+
         xmlLoaded.remove(xmlFileName);
         if (xmlLoaded.size() > 0) {
             doLoadInstance(xmlLoaded.get(xmlLoaded.size() - 1));
@@ -2076,10 +2087,9 @@ public final class VizGUI implements ComponentListener {
         if (!wrap) {
             enumerationXML = xmlFileName;
             A4Solution inst = myStates.get(statepanes - 1).getOriginalInstance().originalA4;
-            CompModule world = this.world;
             Command command = cmd;
-            A4Options options = new A4Options();
-            options.solver = A4Options.SatSolver.SAT4J;
+            Command getInst = new Command(cmd.check, cmd.overall, cmd.bitwidth, cmd.maxseq, CompUtil.parseOneExpression_fromString(world, inst.executableExpr()));
+            inst = TranslateAlloyToKodkod.execute_command(A4Reporter.NOP, world.getAllReachableSigs(), getInst, opt);
 
             int ub_selection = upperBound.get();
             UBKind ub;
@@ -2095,9 +2105,8 @@ public final class VizGUI implements ComponentListener {
 
             int display_selection = minDisplay.get();
 
-
             Minimizer m = new Minimizer();
-            m.minimize(world, command, options, ub);
+            m.minimize(world, command, inst, opt, ub);
 
             inst = m.getInstOrig();
             HashMap<A4Tuple,String> lower = m.getLowerBoundOriginMap();
@@ -2156,10 +2165,9 @@ public final class VizGUI implements ComponentListener {
 
                 loadXML(System.getProperty("user.dir") + "/instWBounds.xml", true);
             }
-
         }
-        return wrapMe();
 
+        return wrapMe();
     }
 
     // /** This method changes the display mode to show the equivalent dot text
@@ -2314,4 +2322,7 @@ public final class VizGUI implements ComponentListener {
         this.cmd = cmd;
     }
 
+    public void setOptions(A4Options opt) {
+        this.opt = opt;
+    }
 }
