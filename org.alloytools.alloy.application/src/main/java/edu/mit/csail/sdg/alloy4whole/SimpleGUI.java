@@ -1199,9 +1199,15 @@ public final class SimpleGUI implements ComponentListener, Listener {
         opt.originalFilename = Util.canon(text.get().getFilename());
         opt.solver = Solver.get();
 
-        CompModule world = CompUtil.parseEverything_fromString(A4Reporter.NOP, text.get().getText());
+        //CompModule world = CompUtil.parseEverything_fromString(A4Reporter.NOP, text.get().getText());
+        CompModule world = CompUtil.parseEverything_fromFile(A4Reporter.NOP, text.takeSnapshot(), Util.canon(text.get().getFilename()), (Version.experimental && ImplicitThis.get()) ? 2 : 1);
         viz.setWorld(world);
         viz.setCommand(world.getAllCommands().get(latestCommand));
+        A4Options opt2 = new A4Options();
+        opt2.solver = Solver.get();
+        opt.tempDirectory = alloyHome(frame) + fs + "tmp2";
+
+        viz.setOptions(opt2);
 
         task.bundleIndex = i;
         task.bundleWarningNonFatal = WarningNonfatal.get();
@@ -1223,6 +1229,8 @@ public final class SimpleGUI implements ComponentListener, Listener {
                 WorkerEngine.run(task, newmem, newstack, alloyHome(frame) + fs + "binary", "", cb);
             subMemoryNow = newmem;
             subStackNow = newstack;
+
+
         } catch (Throwable ex) {
             WorkerEngine.stop();
             log.logBold("Fatal Error: Solver failed due to unknown reason.\n" + "One possible cause is that, in the Options menu, your specified\n" + "memory size is larger than the amount allowed by your OS.\n" + "Also, please make sure \"java\" is in your program path.\n");
