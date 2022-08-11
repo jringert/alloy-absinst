@@ -52,6 +52,12 @@ import edu.mit.csail.sdg.translator.TranslateAlloyToKodkod;
 public class Minimizer {
 
     /**
+     * run some sanity checks during minimization, e.g., check for satisfiability of
+     * problem with original bounds
+     */
+    public static boolean              DO_SANITY_CHECKS = true;
+
+    /**
      * signatures of the original problem
      */
     private ConstList<Sig>             sigsOrig;
@@ -180,17 +186,22 @@ public class Minimizer {
             Command cmdSanity = null;
             if (low) {
                 cmdWithBounds = addBounds(negatePred(cmdOrig), candidate, upper, cmdSigs);
-                cmdSanity = addBounds(cmdOrig, candidate, upper, new ArrayList<>(sigsOrig));
+                if (DO_SANITY_CHECKS) {
+                    cmdSanity = addBounds(cmdOrig, candidate, upper, new ArrayList<>(sigsOrig));
+                }
             } else {
                 cmdWithBounds = addBounds(negatePred(cmdOrig), lower, candidate, cmdSigs);
-                cmdSanity = addBounds(cmdOrig, lower, candidate, new ArrayList<>(sigsOrig));
+                if (DO_SANITY_CHECKS) {
+                    cmdSanity = addBounds(cmdOrig, lower, candidate, new ArrayList<>(sigsOrig));
+                }
             }
 
-            A4Solution ansSanity = TranslateAlloyToKodkod.execute_command(rep, cmdSigs, cmdSanity, optOrig);
-            if (!ansSanity.satisfiable()) {
-                throw new RuntimeException("Unexpected UNSAT result of problem with new bounds that should include the original instance.");
+            if (DO_SANITY_CHECKS) {
+                A4Solution ansSanity = TranslateAlloyToKodkod.execute_command(rep, cmdSigs, cmdSanity, optOrig);
+                if (!ansSanity.satisfiable()) {
+                    throw new RuntimeException("Unexpected UNSAT result of problem with new bounds that should include the original instance.");
+                }
             }
-
             A4Solution ans = TranslateAlloyToKodkod.execute_command(rep, cmdSigs, cmdWithBounds, optOrig);
             return !ans.satisfiable();
         }
@@ -294,7 +305,7 @@ public class Minimizer {
             return;
         }
 
-        {
+        if (DO_SANITY_CHECKS) {
             // sanity check that within given bounds we have some valid instance
             ArrayList<Sig> sigsSanity = new ArrayList<>(this.sigsOrig);
             Command cmdSanity = addBounds(cmd, lower, upper, sigsSanity);
@@ -303,13 +314,17 @@ public class Minimizer {
                 throw new RuntimeException("Problem unsat with original bounds.");
             }
         }
-        {
+        if (DO_SANITY_CHECKS || UBKind.NO_UPPER.equals(ub)) {
             // sanity check that within given bounds we DON'T have any invalid instance
-            // TODO remove, but keep it where UB is of kind NO_UPPER
+            // also check for NO_UPPER as that kind is incomplete
             DdminAbsInstBounds ddmin = new DdminAbsInstBounds(false);
             boolean check = ddmin.check(upper); // all instances in bounds satisfy command
             if (!check) {
-                throw new RuntimeException("Instances in initial bounds that violate the command (maybe UB kind is NO_UPPER?).");
+                if (UBKind.NO_UPPER.equals(ub)) {
+                    throw new RuntimeException("No abstract instance exists for UB kind NO_UPPER (this bound kind is incomplete by nature).");
+                } else {
+                    throw new RuntimeException("Instances in initial bounds that violate the command.");
+                }
             }
         }
 
