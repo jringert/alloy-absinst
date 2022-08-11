@@ -299,7 +299,7 @@ public class Minimizer {
 
         // run once to get bounds written by reporter
         TranslateAlloyToKodkod.execute_command(rep, this.sigsOrig, cmd, opt);
-        initBounds(ans);
+        initBounds(ans, true);
 
         if (!ans.satisfiable()) {
             return;
@@ -328,7 +328,10 @@ public class Minimizer {
             }
         }
 
+        minLowerUpper(ub);
+    }
 
+    private void minLowerUpper(UBKind ub) {
         boolean rerun = true;
         DdminAbsInstBounds min;
         while (rerun) {
@@ -364,7 +367,7 @@ public class Minimizer {
      *
      * @param ans
      */
-    private void initBounds(A4Solution ans) {
+    private void initBounds(A4Solution ans, boolean createLoneSigs) {
         Map<Sig,List<Expr>> atomsPerSig = new LinkedHashMap<>();
 
         // lower bounds are exact tuples
@@ -1260,5 +1263,34 @@ public class Minimizer {
             names.add(ub.toString());
         }
         return names;
+    }
+
+    /**
+     * obtain a different abstract instance, if one exists
+     *
+     * requires prior minimization
+     *
+     * @return true if a new abstract instance was found, false if no further
+     *         abstract instances exist
+     */
+    public boolean next() {
+        List<Sig> sigsWithLonesForBounds = new ArrayList<>(sigsOrig);
+        Command addedBoundsCmd = addBounds(cmdOrig, lower, upper, sigsWithLonesForBounds);
+        Command newInstCmd = addedBoundsCmd.change(cmdOrig.formula.and(addedBoundsCmd.formula.not()));
+        A4Solution ans = TranslateAlloyToKodkod.execute_command(A4Reporter.NOP, sigsWithLonesForBounds, newInstCmd, optOrig);
+        if (ans.satisfiable()) {
+            this.sigsOrig = ConstList.make(sigsWithLonesForBounds);
+            // TODO this might not be necessary and even better for performance if we don't add the negation, however in that case we need to keep the constraints elsewhere for the next call of next() where we need to use them
+            this.cmdOrig = newInstCmd;
+            this.instOrig = ans;
+
+            // init bounds without creating lone sigs
+            initBounds(ans, false);
+            // do actual minimization cycle
+            minLowerUpper(ubKind);
+
+            return true;
+        }
+        return false;
     }
 }
