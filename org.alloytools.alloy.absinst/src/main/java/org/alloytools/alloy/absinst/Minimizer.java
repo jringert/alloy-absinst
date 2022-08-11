@@ -715,7 +715,9 @@ public class Minimizer {
                 // atoms only added as singleton sigs
                 Sig s = loneSig.get(e.atomName());
                 lowerBound = and(lowerBound, s.one());
-                cmdSigs.add(s);
+                if (!cmdSigs.contains(s)) {
+                    cmdSigs.add(s);
+                }
             } else {
                 // fields added as constraints
                 Expr tuple = null;
@@ -778,7 +780,9 @@ public class Minimizer {
                     for (BoundElement e : l) {
                         if (e.isAtom() && e.s == s) {
                             Sig atom = loneSig.get(e.atomName);
-                            cmdSigs.add(atom);
+                            if (!cmdSigs.contains(atom)) {
+                                cmdSigs.add(atom);
+                            }
                             max = plus(max, atom);
                         }
                     }
