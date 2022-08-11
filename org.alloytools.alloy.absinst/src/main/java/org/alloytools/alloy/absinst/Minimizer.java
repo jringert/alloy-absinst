@@ -1275,6 +1275,9 @@ public class Minimizer {
             this.instOrig = ans;
 
             // init bounds without creating lone sigs
+            this.instance = new ArrayList<>();
+            this.lower = new ArrayList<>();
+            this.upper = new ArrayList<>();
             initBounds(ans);
             // do actual minimization cycle
             minLowerUpper(ubKind);
