@@ -93,7 +93,6 @@ public class Minimizer {
      */
     private UBKind                     ubKind         = UBKind.EXACT;
 
-    protected Map<String,BoundElement> boundElem4Atom = new LinkedHashMap<>();
     protected Map<String,PrimSig>      loneSig        = new LinkedHashMap<>();
 
     private A4Solution                 instOrig;
@@ -299,7 +298,7 @@ public class Minimizer {
 
         // run once to get bounds written by reporter
         TranslateAlloyToKodkod.execute_command(rep, this.sigsOrig, cmd, opt);
-        initBounds(ans, true);
+        initBounds(ans);
 
         if (!ans.satisfiable()) {
             return;
@@ -367,9 +366,7 @@ public class Minimizer {
      *
      * @param ans
      */
-    private void initBounds(A4Solution ans, boolean createLoneSigs) {
-        Map<Sig,List<Expr>> atomsPerSig = new LinkedHashMap<>();
-
+    private void initBounds(A4Solution ans) {
         // lower bounds are exact tuples
         for (Sig s : ans.getAllReachableSigs()) {
             if (isRelevant(s)) {
@@ -384,10 +381,13 @@ public class Minimizer {
                         // up multiple times across the inheritance hierarchy
                         if (instanceOf(be, s)) {
                             lower.add(be);
-                            boundElem4Atom.put(be.atomName(), be);
-                            PrimSig atom = new Sig.PrimSig(be.atomName(), (PrimSig) be.s, Attr.LONE);
-                            loneSig.put(be.atomName(), atom);
-                            put(atomsPerSig, s, atom);
+                            PrimSig atom = loneSig.get(be.atomName());
+                            if (atom == null) {
+                                // FIXME check whether this works for the second run where the atoms
+                                // are created from lone sigs or whether we need to modify names here
+                                atom = new Sig.PrimSig(be.atomName(), (PrimSig) be.s, Attr.LONE);
+                                loneSig.put(be.atomName(), atom);
+                            }
                             be.expr = atom;
                         }
                     }
@@ -441,7 +441,6 @@ public class Minimizer {
                             if (loneSig.get(es.atomName()) == null) {
                                 PrimSig atomOfSig = new Sig.PrimSig(es.atomName(), (PrimSig) es.s, Attr.LONE);
                                 loneSig.put(es.atomName(), atomOfSig);
-                                put(atomsPerSig, s, atomOfSig);
                                 es.expr = atomOfSig;
                             } else {
                                 es.expr = loneSig.get(es.atomName());
@@ -526,15 +525,6 @@ public class Minimizer {
         }
 
         return atoms;
-    }
-
-    private <E, F> void put(Map<E,List<F>> map, E key, F elem) {
-        List<F> list = map.get(key);
-        if (list == null) {
-            list = new ArrayList<>();
-            map.put(key, list);
-        }
-        list.add(elem);
     }
 
     /**
@@ -1285,7 +1275,7 @@ public class Minimizer {
             this.instOrig = ans;
 
             // init bounds without creating lone sigs
-            initBounds(ans, false);
+            initBounds(ans);
             // do actual minimization cycle
             minLowerUpper(ubKind);
 
