@@ -139,7 +139,7 @@ public class Minimizer {
     }
 
     private String boundMsg;
-    A4Reporter     rep = new A4Reporter() {
+    public A4Reporter rep = new A4Reporter() {
 
 
                            // For example, here we choose to display each "warning" by printing
