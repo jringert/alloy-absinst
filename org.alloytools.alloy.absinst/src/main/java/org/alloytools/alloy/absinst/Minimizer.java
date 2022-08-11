@@ -383,6 +383,9 @@ public class Minimizer {
                             lower.add(be);
                             PrimSig atom = loneSig.get(be.atomName());
                             if (atom == null) {
+                                // FIXME this breaks because Alloy will name the next atom again as sig$0
+                                // even if the lone sig for it already exists
+
                                 // FIXME check whether this works for the second run where the atoms
                                 // are created from lone sigs or whether we need to modify names here
                                 atom = new Sig.PrimSig(be.atomName(), (PrimSig) be.s, Attr.LONE);
