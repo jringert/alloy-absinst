@@ -674,9 +674,9 @@ public class Minimizer {
      * built-in or meta sigs
      *
      * @param s
-     * @return
+     * @return true if sig is relevant
      */
-    private boolean isRelevant(Sig s) {
+    public static boolean isRelevant(Sig s) {
         if (s.builtin) {
             return false;
         }
