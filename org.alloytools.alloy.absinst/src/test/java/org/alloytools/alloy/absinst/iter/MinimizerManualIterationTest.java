@@ -7,6 +7,7 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
 
+import org.alloytools.alloy.TestUtil;
 import org.alloytools.alloy.absinst.Minimizer;
 import org.alloytools.alloy.absinst.UBKind;
 import org.junit.Test;
@@ -35,9 +36,14 @@ public class MinimizerManualIterationTest {
 
     @Test
     public void testAddressBook3a() {
+        Minimizer.DO_SANITY_CHECKS = false;
+        TestUtil.disableSysOut();
+
         String module = "../org.alloytools.alloy.extra/extra/models/book/chapter2/addressBook3a.als";
 
         countInstances(module);
+
+        TestUtil.restoreSysOut();
         assertEquals(2647, instanceNum);
         assertEquals(3, abstractInstanceNum);
     }
@@ -63,12 +69,19 @@ public class MinimizerManualIterationTest {
 
         instanceNum = instances.size();
 
+        long time = System.currentTimeMillis();
+        int instancesAbstracted = 0;
+
         Set<String> abstractInstances = new HashSet<>();
         for (A4Solution inst : instances) {
             Minimizer m = new Minimizer();
             m.minimize(world, command, inst, options, UBKind.EXACT);
             String absInst = m.getLowerBound().toString() + m.printUpperBound();
             abstractInstances.add(absInst);
+
+            instancesAbstracted++;
+            long secPassed = (System.currentTimeMillis() - time) / 1000;
+            System.err.println("Abstracted " + instancesAbstracted + " (unique: " + abstractInstances.size() + ") in " + secPassed + "sec.");
         }
         abstractInstanceNum = abstractInstances.size();
     }
