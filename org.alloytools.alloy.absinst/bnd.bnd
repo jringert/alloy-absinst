@@ -8,6 +8,10 @@
 	biz.aQute.wrapper.hamcrest, \
     org.sat4j.core, \
 
-src=${^src}
+src=${^src}, src/test/java
 
-Export-Package: org.alloytools.alloy.absinst
+Export-Package: \
+	org.alloytools.alloy.absinst,\
+	org.alloytools.alloy,\
+	org.alloytools.alloy.absinst.viz,\
+	org.alloytools.alloy.absinst.iter

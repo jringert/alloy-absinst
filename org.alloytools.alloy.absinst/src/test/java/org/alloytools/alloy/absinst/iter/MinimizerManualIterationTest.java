@@ -17,6 +17,7 @@ import edu.mit.csail.sdg.ast.Command;
 import edu.mit.csail.sdg.parser.CompModule;
 import edu.mit.csail.sdg.parser.CompUtil;
 import edu.mit.csail.sdg.translator.A4Options;
+import edu.mit.csail.sdg.translator.A4Options.SatSolver;
 import edu.mit.csail.sdg.translator.A4Solution;
 import edu.mit.csail.sdg.translator.TranslateAlloyToKodkod;
 
@@ -48,7 +49,11 @@ public class MinimizerManualIterationTest {
         assertEquals(3, abstractInstanceNum);
     }
 
-    private static void countInstances(String module) {
+    public static void countInstances(String module) {
+        countInstances(module, SatSolver.SAT4J);
+    }
+
+    public static void countInstances(String module, SatSolver solver) {
         instanceNum = 0;
         abstractInstanceNum = 0;
         int cmdNum = 0;
@@ -58,7 +63,7 @@ public class MinimizerManualIterationTest {
         CompModule world = CompUtil.parseEverything_fromFile(A4Reporter.NOP, null, module);
         Command command = world.getAllCommands().get(cmdNum);
         A4Options options = new A4Options();
-        options.solver = A4Options.SatSolver.SAT4J;
+        options.solver = solver;
 
         A4Solution ans = TranslateAlloyToKodkod.execute_command(A4Reporter.NOP, world.getAllReachableSigs(), command, options);
 

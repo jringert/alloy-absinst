@@ -1,11 +1,17 @@
-Main-Class: org.alloytools.alloy.absinst.EvalMain
+Main-Class: org.alloytools.alloy.absint.eval.EvalDummy
 
 -buildpath: \
 	org.alloytools.alloy.application,\
 	org.alloytools.alloy.core,\
 	org.alloytools.alloy.extra,\
 	org.alloytools.alloy.absinst;version=latest,\
-
+	org.alloytools:pardinus.nativesat,\
+	org.alloytools:pardinus.core,\
+	org.sat4j.core,\
+	org.sat4j.maxsat,\
+	org.sat4j.pb,\
+	slf4j.api,\
+	slf4j.simple
 -sources: false
 
 src=${^src}
@@ -21,3 +27,4 @@ src=${^src}
 	@${repo;org.sat4j.maxsat}, \
 	@${repo;org.sat4j.pb}, \
 	LICENSES
+-privatepackage: org.alloytools.alloy.absint.eval
