@@ -7,7 +7,6 @@ import java.util.LinkedHashMap;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
-import java.util.stream.Collectors;
 
 import edu.mit.csail.sdg.alloy4.A4Reporter;
 import edu.mit.csail.sdg.alloy4.ConstList;
@@ -296,19 +295,27 @@ public class Minimizer {
         this.ubKind = ub;
         this.instOrig = ans;
 
+        // check empty bounds
+        if (isTrue(cmd)) {
+            upper = new ArrayList<>();
+            lower = new ArrayList<>();
+            return;
+        }
+
         // run once to get bounds written by reporter
         TranslateAlloyToKodkod.execute_command(rep, this.sigsOrig, cmd, opt);
-        initBounds(ans);
 
         if (!ans.satisfiable()) {
             return;
         }
 
+        initBounds(ans);
+
         if (DO_SANITY_CHECKS) {
             // sanity check that within given bounds we have some valid instance
             ArrayList<Sig> sigsSanity = new ArrayList<>(this.sigsOrig);
             Command cmdSanity = addBounds(cmd, lower, upper, sigsSanity);
-            A4Solution ansSanity = TranslateAlloyToKodkod.execute_command(rep, sigsSanity, cmdSanity, opt);
+            A4Solution ansSanity = TranslateAlloyToKodkod.execute_command(A4Reporter.NOP, sigsSanity, cmdSanity, opt);
             if (!ansSanity.satisfiable()) {
                 throw new RuntimeException("Problem unsat with original bounds.");
             }
@@ -328,6 +335,31 @@ public class Minimizer {
         }
 
         minLowerUpper(ub);
+
+    }
+
+    private boolean isTrue(Command cmd) {
+        Expr negPred = null;
+        List<Expr> facts = null;
+        if (factsOrig.equals(ExprConstant.TRUE)) {
+            facts = new ArrayList<>();
+        } else if (factsOrig instanceof ExprList) {
+            facts = new ArrayList<Expr>(((ExprList) factsOrig).args);
+        } else {
+            return false;
+        }
+        switch (cmdOrig.formula.getClass().getSimpleName()) {
+            case "ExprList" :
+                List<Expr> pred = new ArrayList<Expr>(((ExprList) cmdOrig.formula).args);
+                pred.removeAll(facts);
+                if (pred.size() == 0) {
+                    return true;
+                }
+                break;
+            default :
+                return false;
+        }
+        return false;
     }
 
     private void minLowerUpper(UBKind ub) {
@@ -355,7 +387,7 @@ public class Minimizer {
                 // no change in lower; this means upper is still valid
                 rerun = false;
             }
-            printBounds(this);
+            //printBounds(this);
         }
     }
 
@@ -432,7 +464,7 @@ public class Minimizer {
             upper.clear(); // not really necessary, more of a symbolic act
         } else if (UBKind.EXACT.equals(ubKind)) {
             for (Sig s : ans.getAllReachableSigs()) {
-                if (isRelevant(s) && s.isAbstract == null) {
+                if (isRelevant(s) && s.isAbstract == null && s instanceof PrimSig) {
                     int atomNum = 0;
                     for (String atom : getAtoms(s, boundMsg)) {
                         BoundElement es = new BoundElement();
@@ -448,9 +480,9 @@ public class Minimizer {
                             } else {
                                 es.expr = loneSig.get(es.atomName());
                             }
-                            System.out.println("added UB lone atom " + es.atomName);
+                            //System.out.println("added UB lone atom " + es.atomName);
                         } else {
-                            System.out.println("ignoring UB atom " + es.atomName + " from instance");
+                            //System.out.println("ignoring UB atom " + es.atomName + " from instance");
                         }
                     }
                 }
@@ -843,11 +875,11 @@ public class Minimizer {
         Expr f = cmd.formula;
         if (lowerBound != null) {
             f = f.and(lowerBound);
-            System.out.println("LB for check: one sigs for atoms of " + atomsOf(lower) + " and " + lowerBound);
+            //System.out.println("LB for check: one sigs for atoms of " + atomsOf(lower) + " and " + lowerBound);
         } else {
-            System.out.println("LB for check: one sigs for atoms of " + atomsOf(lower));
+            //System.out.println("LB for check: one sigs for atoms of " + atomsOf(lower));
         }
-        System.out.println("UB for check: " + upperBound);
+        //System.out.println("UB for check: " + upperBound);
         if (upperBound != null) {
             f = f.and(upperBound);
         }
@@ -1051,11 +1083,11 @@ public class Minimizer {
         if (lowerBound != null) {
             f = f.and(lowerBound);
         }
-        System.out.println("LB for check: " + lowerBound);
+        //System.out.println("LB for check: " + lowerBound);
         if (upperBound != null) {
             f = f.and(upperBound);
         }
-        System.out.println("UB for check: " + upperBound);
+        //System.out.println("UB for check: " + upperBound);
         return cmd.change(f);
     }
 
@@ -1130,10 +1162,6 @@ public class Minimizer {
             }
         }
         return e;
-    }
-
-    private List<BoundElement> atomsOf(List<BoundElement> l) {
-        return l.stream().filter(p -> p.isAtom()).collect(Collectors.toList());
     }
 
     /**
