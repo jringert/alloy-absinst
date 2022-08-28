@@ -46,7 +46,7 @@ public class MinimizerManualIterationTest {
 
         TestUtil.restoreSysOut();
         assertEquals(2647, instanceNum);
-        assertEquals(3, abstractInstanceNum);
+        assertEquals(1, abstractInstanceNum);
     }
 
     public static void countInstances(String module) {
