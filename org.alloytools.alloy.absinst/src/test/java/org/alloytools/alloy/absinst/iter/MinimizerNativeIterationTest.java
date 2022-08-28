@@ -4,9 +4,10 @@ import static org.junit.Assert.assertEquals;
 
 import org.alloytools.alloy.absinst.Minimizer;
 import org.alloytools.alloy.absinst.MinimizerUtil;
+import org.junit.Ignore;
 import org.junit.Test;
 
-
+@Ignore
 public class MinimizerNativeIterationTest {
 
     private static int abstractInstanceNum;
