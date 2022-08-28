@@ -1,4 +1,4 @@
-Main-Class: org.alloytools.alloy.absint.eval.EvalDummy
+Main-Class: org.alloytools.alloy.absint.eval.EvalMain
 
 -buildpath: \
 	org.alloytools.alloy.application,\
