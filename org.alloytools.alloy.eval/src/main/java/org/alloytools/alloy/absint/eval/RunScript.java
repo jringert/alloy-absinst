@@ -23,7 +23,7 @@ public class RunScript {
     public static void main(String[] args) {
         List<Path> alloyFiles = new ArrayList<>();
 
-        try (Stream<Path> stream = Files.walk(Paths.get("models/arepair"))) {
+        try (Stream<Path> stream = Files.walk(Paths.get("models"))) {
             alloyFiles = stream.map(Path::normalize).filter(Files::isRegularFile).filter(path -> path.getFileName().toString().endsWith(".als")).collect(Collectors.toList());
         } catch (IOException e) {
             System.out.println(e);

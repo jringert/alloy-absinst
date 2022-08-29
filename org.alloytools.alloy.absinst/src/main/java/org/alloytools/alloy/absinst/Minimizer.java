@@ -348,9 +348,9 @@ public class Minimizer {
         } else {
             return false;
         }
-        switch (cmdOrig.formula.getClass().getSimpleName()) {
+        switch (cmd.formula.getClass().getSimpleName()) {
             case "ExprList" :
-                List<Expr> pred = new ArrayList<Expr>(((ExprList) cmdOrig.formula).args);
+                List<Expr> pred = new ArrayList<Expr>(((ExprList) cmd.formula).args);
                 pred.removeAll(facts);
                 if (pred.size() == 0) {
                     return true;
@@ -1316,5 +1316,9 @@ public class Minimizer {
             return true;
         }
         return false;
+    }
+
+    public UBKind getUbKind() {
+        return ubKind;
     }
 }
