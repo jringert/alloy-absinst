@@ -49,7 +49,7 @@ pred Contains ( This : List , x : Int , result : Boolean ) {
 }
 
 run { all l : List | all x : Int | all b: Boolean | Contains[l,x,b]} for 3 but 2 Int
-\
+
 
 fact IGNORE {
   one List

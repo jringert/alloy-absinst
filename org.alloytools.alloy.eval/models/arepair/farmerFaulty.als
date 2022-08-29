@@ -1,5 +1,9 @@
 module farmer
 
+/* 
+Replaced primed variable names x' by xP for compatibility with Alloy6
+*/
+
 /*
  * The classic river crossing puzzle. A farmer is carrying a fox, a
  * chicken, and a sack of grain. He must cross a river using a boat
@@ -56,16 +60,16 @@ fact initialState {
 // rather it considers eating to happen in "to" instead of "from",
 // which stops the farmer from leaving and letting the fox eat
 // the chicken without farmer coming back).
-pred crossRiver [from, from', to, to': set Object] {
+pred crossRiver [from, fromP, to, toP: set Object] {
   // either the Farmer takes no items
-  // Fix: replace "from' = from - Farmer && to' = to - to.eats + Farmer" with "from' = from - Farmer - from'.eats && to' = to + Farmer".
-  ( from' = from - Farmer &&
-    to' = to - to.eats + Farmer ) ||
+  // Fix: replace "from = from - Farmer && to' = to - to.eats + Farmer" with "from' = from - Farmer - from'.eats && to' = to + Farmer".
+  ( fromP = from - Farmer &&
+    toP = to - to.eats + Farmer ) ||
   // or the Farmer takes one item
   // Fix: replace "from' = from - Farmer - item && to' = to - to.eats + Farmer + item" with "from' = from - Farmer - item - from'.eats && to' = to + Farmer + item".
   (some item: from - Farmer {
-    from' = from - Farmer - item
-    to' = to - to.eats + Farmer + item
+    fromP = from - Farmer - item
+    toP = to - to.eats + Farmer + item
   })
 }
 
@@ -73,10 +77,10 @@ pred crossRiver [from, from', to, to': set Object] {
  * crossRiver transitions between states
  */
 fact stateTransition {
-  all s: State, s': ord/next[s] {
+  all s: State, sP: ord/next[s] {
     Farmer in s.near =>
-      crossRiver[s.near, s'.near, s.far, s'.far] else
-      crossRiver[s.far, s'.far, s.near, s'.near]
+      crossRiver[s.near, sP.near, s.far, sP.far] else
+      crossRiver[s.far, sP.far, s.near, sP.near]
   }
 }
 
