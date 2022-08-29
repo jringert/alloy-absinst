@@ -94,6 +94,8 @@ public class Minimizer {
 
     protected Map<String,PrimSig>      loneSig        = new LinkedHashMap<>();
 
+    protected Map<String,Sig>     enumVal          = new LinkedHashMap<>();
+
     private A4Solution                 instOrig;
 
     protected class BoundElement {
@@ -440,6 +442,8 @@ public class Minimizer {
                         }
                     }
                 }
+            } else if (isEnumConstant(s)) {
+                enumVal.put(s.label, s);
             }
         }
 
@@ -703,7 +707,7 @@ public class Minimizer {
      * checks relevance of signatures for computing bounds
      *
      * bounds should be ignored for signatures where this returns false, e.g.,
-     * built-in or meta sigs
+     * built-in, meta, or enum sigs
      *
      * @param s
      * @return true if sig is relevant
@@ -715,12 +719,30 @@ public class Minimizer {
         if (s.isMeta != null) {
             return false;
         }
+        if (s.isEnum != null) {
+            return false;
+        }
+        if (isEnumConstant(s)) {
+            return false;
+        }
         // TODO this is just a guess
         if (s.toString().endsWith("/Ord")) {
             return false;
         }
 
         return true;
+    }
+
+    private static boolean isEnumConstant(Expr e) {
+        if (e instanceof Sig) {
+            Sig s = (Sig) e;
+            if (s.isSubsig != null && s instanceof PrimSig) {
+                if (((PrimSig) s).parent != null && ((PrimSig) s).parent.isEnum != null) {
+                    return true;
+                }
+            }
+        }
+        return false;
     }
 
     /**
@@ -755,7 +777,7 @@ public class Minimizer {
                     tuple = product(tuple, s);
                     // reject tuple if sig is missing
                     // INFO this is a deliberate decision as there will be a larger set "lower" for all possible tuples (larges is the instance itself)
-                    if (!hasAtom(lower, e.t.atom(i))) {
+                    if (!isEnumConstant(s) && !hasAtom(lower, e.t.atom(i))) {
                         sigMissingAndTupleInvalid = true;
                         // stop handling this tuple (inner loop)
                         break;
@@ -1161,6 +1183,14 @@ public class Minimizer {
             } catch (Exception e2) {
             }
         }
+        if (e == null && atom.endsWith("$0")) {
+            String baseName = atom.replaceAll("\\$0", "");
+            for (String name : enumVal.keySet()) {
+                if (name.endsWith("/" + baseName)) {
+                    e = enumVal.get(name);
+                }
+            }
+        }
         return e;
     }
 
@@ -1192,8 +1222,13 @@ public class Minimizer {
      * @return
      */
     private boolean hasSigForAtom(List<Sig> cmdSigs, String atom) {
+        Expr atomExpr = retrieveAtomExpr(atom);
         // if it is not a signature it is always present
-        if (!(retrieveAtomExpr(atom) instanceof PrimSig)) {
+        if (!(atomExpr instanceof PrimSig)) {
+            return true;
+        }
+        // enum vals are also always present
+        if (isEnumConstant(atomExpr)) {
             return true;
         }
         for (Sig sig : cmdSigs) {
