@@ -139,11 +139,12 @@ public class Minimizer {
     }
 
     private String boundMsg;
-    public A4Reporter rep = new A4Reporter() {
+    /**
+     * reporter to learn the bounds of the run (use it only on first run)
+     */
+    public A4Reporter repBounds = new A4Reporter() {
 
 
-                           // For example, here we choose to display each "warning" by printing
-                           // it to System.out
                            @Override
                            public void warning(ErrorWarning msg) {
                                System.out.print("Relevance Warning:\n" + (msg.toString().trim()) + "\n\n");
@@ -164,6 +165,18 @@ public class Minimizer {
                            //            System.out.println(msg);
                            //        }
                        };
+
+    public List<String> problemSizes = new ArrayList<>();
+    /**
+     * reporter to capture CNF sizer
+     */
+    public A4Reporter   repCnf       = new A4Reporter() {
+
+                                    @Override
+                                    public void solve(int plength, int primaryVars, int totalVars, int clauses) {
+                                        problemSizes.add("primVars: " + primaryVars + ", vars: " + totalVars + ", clauses: " + clauses);
+                                    };
+                                };
 
     public class DdminAbsInstBounds extends AbstractDdmin<BoundElement> {
 
@@ -197,12 +210,12 @@ public class Minimizer {
             }
 
             if (DO_SANITY_CHECKS) {
-                A4Solution ansSanity = TranslateAlloyToKodkod.execute_command(rep, cmdSigs, cmdSanity, optOrig);
+                A4Solution ansSanity = TranslateAlloyToKodkod.execute_command(A4Reporter.NOP, cmdSigs, cmdSanity, optOrig);
                 if (!ansSanity.satisfiable()) {
                     throw new RuntimeException("Unexpected UNSAT result of problem with new bounds that should include the original instance.");
                 }
             }
-            A4Solution ans = TranslateAlloyToKodkod.execute_command(rep, cmdSigs, cmdWithBounds, optOrig);
+            A4Solution ans = TranslateAlloyToKodkod.execute_command(repCnf, cmdSigs, cmdWithBounds, optOrig);
             return !ans.satisfiable();
         }
 
@@ -283,7 +296,7 @@ public class Minimizer {
     }
 
     public void minimize(Module world, Command cmd, A4Options opt, UBKind ub) {
-        A4Solution ans = TranslateAlloyToKodkod.execute_command(rep, world.getAllReachableSigs(), cmd, opt);
+        A4Solution ans = TranslateAlloyToKodkod.execute_command(A4Reporter.NOP, world.getAllReachableSigs(), cmd, opt);
         minimize(world, cmd, ans, opt, ub);
     }
 
@@ -296,6 +309,7 @@ public class Minimizer {
         this.boundMsg = "";
         this.ubKind = ub;
         this.instOrig = ans;
+        this.problemSizes = new ArrayList<>();
 
         // check empty bounds
         if (isTrue(cmd)) {
@@ -305,7 +319,7 @@ public class Minimizer {
         }
 
         // run once to get bounds written by reporter
-        TranslateAlloyToKodkod.execute_command(rep, this.sigsOrig, cmd, opt);
+        TranslateAlloyToKodkod.execute_command(repBounds, this.sigsOrig, cmd, opt);
 
         if (!ans.satisfiable()) {
             return;

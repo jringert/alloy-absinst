@@ -69,7 +69,7 @@ public class EvalMain {
     private static void computeFirstN(String[] args, String module, int n, int cmdNum, UBKind ubKind, SatSolver solver) {
         CompModule world = CompUtil.parseEverything_fromFile(A4Reporter.NOP, null, module);
         if (world.getAllCommands().isEmpty()) {
-            write_report(make_report(args, "nop: no commands"));
+            write_report(make_report(args, new ArrayList<>(), "nop: no commands"));
             return;
         }
         Command command = world.getAllCommands().get(cmdNum);
@@ -79,14 +79,15 @@ public class EvalMain {
         List<A4Solution> solutions = new ArrayList<>();
 
         A4Solution ans = null;
+        Minimizer m = new Minimizer();
         for (int i = 0; i < n; i++) {
             long time = System.currentTimeMillis();
             if (ans == null) {
                 try {
-                    ans = TranslateAlloyToKodkod.execute_command(A4Reporter.NOP, world.getAllReachableSigs(), command, options);
+                    ans = TranslateAlloyToKodkod.execute_command(m.repCnf, world.getAllReachableSigs(), command, options);
                 } catch (Exception e) {
                     time = System.currentTimeMillis() - time;
-                    write_report(make_report(args, "concreteInstance", "num:", "" + i, "ms:", "" + time, "nop: exception solving", e.getMessage()));
+                    write_report(make_report(args, m.problemSizes, "concreteInstance", "num:", "" + i, "ms:", "" + time, "nop: exception solving", e.getMessage()));
                     return;
                 }
             } else {
@@ -97,22 +98,22 @@ public class EvalMain {
             if (!ans.satisfiable()) {
                 break;
             } else {
-                write_report(make_report(args, "concreteInstance", "num:", "" + i, "ms:", "" + time, "size:", "" + MeasureInstSize.sizeOf(ans)));
+                write_report(make_report(args, m.problemSizes, "concreteInstance", "num:", "" + i, "ms:", "" + time, "size:", "" + MeasureInstSize.sizeOf(ans)));
             }
             solutions.add(ans);
         }
 
         int i = 0;
         for (A4Solution instance : solutions) {
-            Minimizer m = new Minimizer();
+            m = new Minimizer();
             long time = System.currentTimeMillis();
             try {
                 m.minimize(world, command, instance, options, ubKind);
                 time = System.currentTimeMillis() - time;
-                write_report(make_report(args, "abstractInstance", "num:", "" + i, "ms:", "" + time, "size:", "" + MeasureInstSize.sizeOf(m), "lb:", m.getLowerBound().toString(), "ub:", m.printUpperBound()));
+                write_report(make_report(args, m.problemSizes, "abstractInstance", "num:", "" + i, "ms:", "" + time, "size:", "" + MeasureInstSize.sizeOf(m), "lb:", m.getLowerBound().toString(), "ub:", m.printUpperBound()));
             } catch (Exception e) {
                 time = System.currentTimeMillis() - time;
-                write_report(make_report(args, "abstractInstance", "num:", "" + i, "ms:", "" + time, "nop: exception solving", e.getMessage()));
+                write_report(make_report(args, m.problemSizes, "abstractInstance", "num:", "" + i, "ms:", "" + time, "nop: exception solving", e.getMessage()));
             }
             i++;
         }
@@ -120,12 +121,14 @@ public class EvalMain {
 
     }
 
-    private static String make_report(String[] args, String... info) {
+    private static String make_report(String[] args, List<String> sizes, String... info) {
         StringBuffer rep = new StringBuffer();
 
         rep.append(Arrays.deepToString(args));
         rep.append("\n");
         rep.append(Arrays.deepToString(info));
+        rep.append("\n");
+        rep.append(sizes.toString());
 
         return rep.toString();
     }

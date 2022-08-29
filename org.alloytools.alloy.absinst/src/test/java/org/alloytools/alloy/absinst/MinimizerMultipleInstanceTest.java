@@ -10,6 +10,7 @@ import java.util.List;
 
 import org.junit.Test;
 
+import edu.mit.csail.sdg.alloy4.A4Reporter;
 import edu.mit.csail.sdg.ast.Command;
 import edu.mit.csail.sdg.ast.Sig;
 import edu.mit.csail.sdg.translator.A4Options;
@@ -57,7 +58,7 @@ public class MinimizerMultipleInstanceTest {
         A4Options options = new A4Options();
         options.solver = A4Options.SatSolver.SAT4J;
 
-        A4Solution ans = TranslateAlloyToKodkod.execute_command(m.rep, sigs, cmd, options);
+        A4Solution ans = TranslateAlloyToKodkod.execute_command(A4Reporter.NOP, sigs, cmd, options);
         int sols = 0;
 
         while (ans.satisfiable()) {
