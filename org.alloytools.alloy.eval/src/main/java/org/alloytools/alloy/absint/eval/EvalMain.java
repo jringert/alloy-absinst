@@ -41,8 +41,9 @@ public class EvalMain {
         switch (mode) {
             case "first-n" :
                 int n = Integer.parseInt(args[2]);
-                UBKind ubKind = UBKind.valueOf(args[3]);
-                computeFirstN(args, fileName, n, ubKind, getSolver(solver));
+                int cmdNum = Integer.parseInt(args[3]);
+                UBKind ubKind = UBKind.valueOf(args[4]);
+                computeFirstN(args, fileName, n, cmdNum, ubKind, getSolver(solver));
                 break;
 
             default :
@@ -65,13 +66,13 @@ public class EvalMain {
         return SatSolver.SAT4J;
     }
 
-    private static void computeFirstN(String[] args, String module, int n, UBKind ubKind, SatSolver solver) {
+    private static void computeFirstN(String[] args, String module, int n, int cmdNum, UBKind ubKind, SatSolver solver) {
         CompModule world = CompUtil.parseEverything_fromFile(A4Reporter.NOP, null, module);
         if (world.getAllCommands().isEmpty()) {
             write_report(make_report(args, "nop: no commands"));
             return;
         }
-        Command command = world.getAllCommands().get(0);
+        Command command = world.getAllCommands().get(cmdNum);
         A4Options options = new A4Options();
         options.solver = solver;
 
