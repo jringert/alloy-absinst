@@ -85,6 +85,7 @@ public class EvalMain {
                 try {
                     ans = TranslateAlloyToKodkod.execute_command(A4Reporter.NOP, world.getAllReachableSigs(), command, options);
                 } catch (Exception e) {
+                    time = System.currentTimeMillis() - time;
                     write_report(make_report(args, "concreteInstance", "num:", "" + i, "ms:", "" + time, "nop: exception solving", e.getMessage()));
                     return;
                 }
@@ -94,7 +95,6 @@ public class EvalMain {
             time = System.currentTimeMillis() - time;
 
             if (!ans.satisfiable()) {
-                write_report(make_report(args, "concreteInstance", "num:", "" + i, "ms:", "" + time, "nop: no solution"));
                 break;
             } else {
                 write_report(make_report(args, "concreteInstance", "num:", "" + i, "ms:", "" + time, "size:", "" + MeasureInstSize.sizeOf(ans)));
@@ -108,11 +108,12 @@ public class EvalMain {
             long time = System.currentTimeMillis();
             try {
                 m.minimize(world, command, instance, options, ubKind);
+                time = System.currentTimeMillis() - time;
+                write_report(make_report(args, "abstractInstance", "num:", "" + i, "ms:", "" + time, "size:", "" + MeasureInstSize.sizeOf(m), "lb:", m.getLowerBound().toString(), "ub:", m.printUpperBound()));
             } catch (Exception e) {
+                time = System.currentTimeMillis() - time;
                 write_report(make_report(args, "abstractInstance", "num:", "" + i, "ms:", "" + time, "nop: exception solving", e.getMessage()));
             }
-            time = System.currentTimeMillis() - time;
-            write_report(make_report(args, "abstractInstance", "num:", "" + i, "ms:", "" + time, "size:", "" + MeasureInstSize.sizeOf(m), "lb:", m.getLowerBound().toString(), "ub:", m.printUpperBound()));
             i++;
         }
 
