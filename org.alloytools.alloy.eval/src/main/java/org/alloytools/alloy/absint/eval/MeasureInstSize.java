@@ -39,11 +39,30 @@ public class MeasureInstSize {
      */
     public static int sizeOf(Minimizer absInst) {
         int lower = absInst.getLowerBound().size();
-        int upper = absInst.printUpperBound().split("∌").length - 1;
 
-        if (upper <= 0) {
-            return lower;
+        int upper = 0;
+        switch (absInst.getUbKind()) {
+            case EXACT :
+                upper = absInst.printUpperBound().split("∌").length - 1;
+                if (upper < 0) {
+                    upper = 0;
+                }
+                break;
+            case INSTANCE_OR_NO_UPPER :
+                upper = absInst.getUpperBound().size();
+                break;
+            case INSTANCE :
+                // fixed UB has no size, TODO might be worth discussion, could be size of original instance?
+                upper = 0;
+                break;
+            case NO_UPPER :
+                // never an UB
+                upper = 0;
+                break;
+            default :
+                break;
         }
+
         return lower + upper;
     }
 
