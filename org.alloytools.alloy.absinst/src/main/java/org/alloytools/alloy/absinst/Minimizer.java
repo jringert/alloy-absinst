@@ -722,6 +722,9 @@ public class Minimizer {
         if (s.isEnum != null) {
             return false;
         }
+        if (s.isSubset != null) {
+            return false;
+        }
         if (isEnumConstant(s)) {
             return false;
         }
