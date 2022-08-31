@@ -2,15 +2,16 @@ package org.alloytools.alloy.absinst;
 
 import static org.junit.Assert.assertEquals;
 
+import org.junit.Ignore;
 import org.junit.Test;
 
 import edu.mit.csail.sdg.translator.A4Options.SatSolver;
 
-
+@Ignore
 public class MinimizerTemporalTest {
 
     @Test
-    public void testEnumOneARun() {
+    public void testTemporalAlternatingRun() {
         String module = "src/test/alloy/temporal/alternating.als";
 
         int cmdNum = 0;
