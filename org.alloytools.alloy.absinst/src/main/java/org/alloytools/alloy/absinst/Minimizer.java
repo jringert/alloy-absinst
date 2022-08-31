@@ -774,10 +774,10 @@ public class Minimizer {
         if (isEnumConstant(s)) {
             return false;
         }
-        // TODO this is just a guess
-        if (s.toString().endsWith("/Ord")) {
-            return false;
-        }
+        //        // TODO this is just a guess
+        //        if (s.toString().endsWith("/Ord")) {
+        //            return false;
+        //        }
 
         return true;
     }

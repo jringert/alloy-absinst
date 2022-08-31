@@ -32,7 +32,7 @@ class EvalMainTest {
     @Test
     void testBugs() {
         EvalMain.main(new String[] {
-                                    "models/arepair/arr2.als", "first-n", "1", "0", "EXACT", "SAT4J"
+                                    "models/examples/systems/views.als", "first-n", "10", "0", "EXACT", "SAT4J"
         });
     }
 

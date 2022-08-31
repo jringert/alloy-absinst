@@ -58,4 +58,27 @@ public class MinimizerTest {
         assertEquals("[Element$1, Element$2, Array$0 -> Int[0] -> Element$0, Array$0 -> Int[1] -> Element$0, Array$0 -> Int[2] -> Element$0, Array$0 -> Int[0] -> Element$1, Array$0 -> Int[1] -> Element$1, Array$0 -> Int[2] -> Element$1, Array$0 -> Int[0] -> Element$2, Array$0 -> Int[1] -> Element$2, Array$0 -> Int[2] -> Element$2, Array$0 -> Int[0], Array$0 -> Int[1], Array$0 -> Int[2]]", m.getUpperBound().toString());
     }
 
+    @Test
+    public void testViews() {
+        String module = "../org.alloytools.alloy.eval/models/examples/systems/views.als";
+        int cmdNum = 0;
+
+        Minimizer m = MinimizerUtil.testMin(module, cmdNum, UBKind.INSTANCE);
+
+
+        assertEquals("", m.getLowerBound().toString());
+        assertEquals("", m.getUpperBound().toString());
+    }
+
+    @Test
+    public void testOrdering() {
+        String module = "src/test/alloy/ordering.als";
+        int cmdNum = 0;
+
+        Minimizer m = MinimizerUtil.testMin(module, cmdNum, UBKind.EXACT);
+
+
+        assertEquals("[State$0->-1, State$1->0, so/Ord$0->State$0->State$1]", m.getLowerBound().toString());
+        assertEquals("[]", m.printUpperBound().toString());
+    }
 }
