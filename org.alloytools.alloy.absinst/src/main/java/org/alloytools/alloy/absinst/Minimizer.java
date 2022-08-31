@@ -4,9 +4,11 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashMap;
 import java.util.LinkedHashMap;
+import java.util.LinkedHashSet;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 
 import edu.mit.csail.sdg.alloy4.A4Reporter;
 import edu.mit.csail.sdg.alloy4.ConstList;
@@ -542,6 +544,11 @@ public class Minimizer {
                     exprsExt.add(atom);
                 }
             }
+            if (atoms.isEmpty()) {
+                // very likely this is undesired...
+                return new ArrayList<>();
+            }
+
             exprs = exprsExt;
         }
         return exprs;
@@ -559,18 +566,18 @@ public class Minimizer {
         if (sig == Sig.UNIV) {
             throw new RuntimeException("UNIV atoms not calculated yet");
         }
+
         for (PrimSig child : sig.children()) {
             atoms.addAll(getPossibleAtoms(child));
         }
         if (sig.children().isEmpty()) {
             if (sig.isLone != null || sig.isOne != null) {
                 atoms.add(sig);
-            } else if ("seq/Int".equals(sig.label)) {
-                for (ExprVar exprVar : instOrig.getAllAtoms()) {
-                    if (exprVar.type().is_int()) {
-                        int i = Integer.parseInt(exprVar.label);
-                        atoms.add(ExprConstant.makeNUMBER(i));
-                    }
+            } else if (sig == Sig.SEQIDX || sig == Sig.SIGINT) {
+                for (A4Tuple t : instOrig.eval(sig)) {
+                    int i = Integer.parseInt(t.atom(0));
+                    atoms.add(ExprConstant.makeNUMBER(i));
+
                 }
             } else {
                 throw new RuntimeException("sig " + sig.label + " not handled yet");
@@ -621,13 +628,13 @@ public class Minimizer {
 
     private boolean sameTuple(A4Tuple t, Expr expr) {
         if (expr instanceof ExprBinary && ExprBinary.Op.ARROW.equals(((ExprBinary) expr).op)) {
-            LinkedList<Sig> atomsInExpr = atomsInProduct(expr);
+            LinkedList<String> atomsInExpr = atomsInProduct(expr);
 
             if (t.arity() != atomsInExpr.size()) {
                 return false;
             }
             for (int i = 0; i < t.arity(); i++) {
-                if (!t.atom(i).equals(atomsInExpr.get(i).label)) {
+                if (!t.atom(i).equals(atomsInExpr.get(i))) {
                     return false;
                 }
             }
@@ -642,14 +649,39 @@ public class Minimizer {
      * @param expr
      * @return
      */
-    private LinkedList<Sig> atomsInProduct(Expr expr) {
-        LinkedList<Sig> atomsInExpr = new LinkedList<>();
+    private LinkedList<String> atomsInProduct(Expr expr) {
+        LinkedList<String> atomsInExpr = new LinkedList<>();
         while (expr instanceof ExprBinary) {
             ExprBinary exprB = (ExprBinary) expr;
-            atomsInExpr.addFirst((Sig) exprB.right);
+            String atomName = exprB.right.toString();
+            if (exprB.right instanceof ExprConstant) {
+                atomName = Integer.toString(((ExprConstant) exprB.right).num);
+            }
+            atomsInExpr.addFirst(atomName);
             expr = exprB.left;
         }
-        atomsInExpr.addFirst((Sig) expr);
+        atomsInExpr.addFirst(expr.toString());
+        return atomsInExpr;
+    }
+
+    /**
+     * given a product expression extract all atoms
+     *
+     * @param expr
+     * @return
+     */
+    private Set<Sig> atomSigsInProduct(Expr expr) {
+        Set<Sig> atomsInExpr = new LinkedHashSet<>();
+        while (expr instanceof ExprBinary) {
+            ExprBinary exprB = (ExprBinary) expr;
+            if (exprB.right instanceof Sig) {
+                atomsInExpr.add((Sig) exprB.right);
+            }
+            expr = exprB.left;
+        }
+        if (expr instanceof Sig) {
+            atomsInExpr.add((Sig) expr);
+        }
         return atomsInExpr;
     }
 
@@ -864,7 +896,7 @@ public class Minimizer {
 
             // TODO do something similar for fields
             for (Sig s : sigsOrig) {
-                // for every relevant sig s collect max atoms
+                // for every field of every relevant sig s collect max tuples
                 if (isRelevant(s)) {
                     for (Field f : s.getFields()) {
                         Expr max = null;
@@ -933,7 +965,7 @@ public class Minimizer {
      * @param cmdSigs
      */
     private boolean mightHaveAtoms(Expr expr, List<Sig> cmdSigs) {
-        return cmdSigs.containsAll(atomsInProduct(expr));
+        return cmdSigs.containsAll(atomSigsInProduct(expr));
     }
 
     /**
@@ -1207,6 +1239,9 @@ public class Minimizer {
                     e = enumVal.get(name);
                 }
             }
+        }
+        if (e == null) {
+            throw new RuntimeException("Unable to find atom for name " + atom);
         }
         return e;
     }
