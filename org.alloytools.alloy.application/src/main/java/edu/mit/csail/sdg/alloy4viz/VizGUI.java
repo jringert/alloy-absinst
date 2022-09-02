@@ -2153,7 +2153,7 @@ public final class VizGUI implements ComponentListener {
             Minimizer m = new Minimizer();
             m.minimize(world, command, inst, opt, ub);
 
-            upperbound_stmt += "<b>UB = </b>" + m.getUpperBound().toString();
+            upperbound_stmt += "<b>UB = </b>" + m.printUpperBound().toString();
 
             inst = m.getInstOrig();
             HashMap<A4Tuple,String> lower = m.getLowerBoundOriginMap();
