@@ -230,6 +230,7 @@ public final class AbsWriter {
 
         boolean write_sig_upper = false;
         for (String ub : upper) {
+
             if (x.toString().contentEquals(ub))
                 write_sig_upper = true;
         }

@@ -14,46 +14,14 @@
    <type name="Int"/>
    <type name="seq/Int"/>
    <type name="String"/>
-   <type name="Person"/>
-   <type name="Student"/>
-   <type name="Professor"/>
-   <type name="Student"/>
-   <type name="Professor"/>
-   <type name="Class"/>
-   <type name="Assignment"/>
+   <type name="Color"/>
+   <type name="Red"/>
+   <type name="Blue"/>
+   <type name="Red"/>
+   <type name="Blue"/>
+   <type name="Node"/>
 
 </node>
-
-<node color ="Yellow" label="$LB">
-   <set name="$LB Student$1" type="Student"/>
-</node>
-
-<node color ="Yellow" label="$LB">
-   <set name="$LB Class$0" type="Class"/>
-</node>
-
-<node color ="Yellow" label="$LB">
-   <set name="$LB Assignment$2" type="Assignment"/>
-</node>
-
-<node color ="Yellow" label="$LB">
-   <set name="$LB Student$0" type="Student"/>
-</node>
-
-<edge color ="Black" label="$LB assistant_for">
-   <relation name="$LB Class$0->Student$1"> <type name="Class"/> <type name="Student"/> </relation>
-
-</edge>
-
-<edge color ="Black" label="$LB assistant_for">
-   <relation name="$LB Class$0->Student$0"> <type name="Class"/> <type name="Student"/> </relation>
-
-</edge>
-
-<edge color ="Black" label="$LB associated_with">
-   <relation name="$LB Assignment$2->Class$0"> <type name="Assignment"/> <type name="Class"/> </relation>
-
-</edge>
 
 </view>
 

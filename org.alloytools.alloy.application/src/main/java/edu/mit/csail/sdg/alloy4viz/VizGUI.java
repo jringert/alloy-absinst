@@ -50,6 +50,7 @@ import java.io.UnsupportedEncodingException;
 import java.lang.reflect.Method;
 import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
@@ -2186,10 +2187,12 @@ public final class VizGUI implements ComponentListener {
             Minimizer m = new Minimizer();
             m.minimize(world, command, inst, opt, ub);
 
+            upperbound_stmt += "<b>LB = </b>" + m.getLowerBound().toString() + "<br><br>";
             upperbound_stmt += "<b>UB = </b>" + m.printUpperBound();//m.getUpperBound().toString();
 
             inst = m.getInstOrig();
             HashMap<A4Tuple,String> lower = m.getLowerBoundOriginMap();
+
             ArrayList<String> upper = m.getUpperBoundNames();
             HashMap<A4Tuple,Sig> lowerSig = m.getLowerBoundSigs();
             HashMap<A4Tuple,Field> lowerField = m.getLowerBoundFields();
@@ -2289,10 +2292,43 @@ public final class VizGUI implements ComponentListener {
                         }
                     }
                     HashMap<A4Tuple,String> new_lower = new HashMap<A4Tuple,String>();
+                    HashSet<String> needed_atoms = new HashSet<String>();
+                    HashSet<String> curr_atoms = new HashSet<String>();
                     for (A4Tuple t : lower.keySet()) {
-                        if (skolem_map.containsKey(t.toString().replace("$", "")))
-                            new_lower.put(t, skolem_map.get(t.toString().replace("$", "")));
+                        if (skolem_map.containsKey(t.toString().replace("$", ""))) {
+                            // new_lower.put(t, skolem_map.get(t.toString().replace("$", "")));
+                            curr_atoms.add(skolem_map.get(t.toString().replace("$", "")));
+                        }
                         else {
+                            String curr = t.toString();
+                            curr = curr.replace("$", "");
+                            for (String replace : skolem_map.keySet()) {
+                                curr = curr.replace(replace, skolem_map.get(replace));
+                            }
+                            String[] atoms = curr.split("->");
+                            for (String a : atoms) {
+                                needed_atoms.add(a);
+                            }
+                            //  new_lower.put(t, curr);
+                        }
+                    }
+
+                    for (String need : needed_atoms) {
+                        if (!curr_atoms.contains(need)) {
+                            for (Sig s : world.getAllSigs()) {
+                                for (A4Tuple t : inst.eval(s)) {
+                                    if (t.toString().equals(need)) {
+                                        lower.put(t, need);
+                                    }
+                                }
+                            }
+                        }
+                    }
+
+                    for (A4Tuple t : lower.keySet()) {
+                        if (skolem_map.containsKey(t.toString().replace("$", ""))) {
+                            new_lower.put(t, skolem_map.get(t.toString().replace("$", "")));
+                        } else {
                             String curr = t.toString();
                             curr = curr.replace("$", "");
                             for (String replace : skolem_map.keySet()) {
