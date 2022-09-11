@@ -56,7 +56,7 @@ public class CycleVizInst {
         out.close();
 
         PrintWriter out_theme = new PrintWriter(System.getProperty("user.dir") + "/src/test/inst/cycleWInst.thm");
-        AbstWriterWithInstance.writeTheme(instance, out_theme, lowerSig, lowerField);
+        //AbstWriterWithInstance.writeTheme(instance, out_theme, lowerSig, lowerField);
         out_theme.close();
 
         //This hangs

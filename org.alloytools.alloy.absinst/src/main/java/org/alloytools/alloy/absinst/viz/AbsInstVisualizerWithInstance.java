@@ -56,7 +56,7 @@ public class AbsInstVisualizerWithInstance {
             throw new ErrorFatal("Error writing the solution XML file.");
 
         PrintWriter out_theme = new PrintWriter("absOI.thm");
-        AbstWriterWithInstance.writeTheme(instance, out_theme, lowerSig, lowerField);
+        // AbstWriterWithInstance.writeTheme(instance, out_theme, lowerSig, lowerField);
 
         //        VizGUI viz = new VizGUI(false, "absOI.xml", null);
         //        viz.loadThemeFile("absOI.thm");

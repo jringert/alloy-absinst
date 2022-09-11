@@ -184,7 +184,8 @@ public final class AbstWriterWithInstance {
                 //To avoid duplicate relations in visualization, do not print relation if in lower bound.
                 boolean inLower = false;
                 for (A4Tuple lb : lower.keySet()) {
-                    if (t.toString().contentEquals(lb.toString())) {
+                    //if (t.toString().contentEquals(lb.toString())) {
+                    if (t.toString().contentEquals(lower.get(lb).toString())) {
                         inLower = true;
                         break;
                     }
@@ -362,13 +363,50 @@ public final class AbstWriterWithInstance {
         for (Sig s : sigs)
             if (s instanceof SubsetSig)
                 writeSig(s, state, lower);
+        int m = 0;
+
+        //Add lower bound skolems
+        for (A4Tuple lb : lower.keySet()) {
+            StringBuilder sb = new StringBuilder();
+            String label = "$LB " + lower.get(lb).toString();
+            out.print("\n<skolem label=\"" + label + "\" ID=\"m" + m + "\">\n");
+            out.print("   <tuple>");
+            if (lb.arity() == 1) {
+                Util.encodeXMLs(out, " <atom label=\"", lower.get(lb), "\"/>");
+            } else {
+                String[] a_labels = lower.get(lb).split("->");
+                for (String l : a_labels)
+                    Util.encodeXMLs(out, " <atom label=\"", l, "\"/>");
+
+            }
+
+            out.print(" </tuple>\n");
+            for (List<PrimSig> ps : lb.type().fold()) {
+                out.print("   <types>");
+                for (PrimSig sig : ps) {
+                    String id = "";
+                    for (Expr e : map.keySet()) {
+                        if (e.type().toString().equals(sig.type().toString())) {
+                            id = map.get(e);
+                            break;
+                        }
+                    }
+                    Util.encodeXMLs(out, " <type ID=\"", id, "\"/>");
+                }
+
+                out.print(" </types>\n");
+            }
+            out.print("</skolem>\n");
+            m++;
+        }
+
         if (sol != null)
             for (ExprVar s : sol.getAllSkolems()) {
                 if (rep != null)
                     rep.write(s);
                 writeSkolem(s, state);
             }
-        int m = 0;
+
         if (sol != null && extraSkolems != null)
             for (Func f : extraSkolems)
                 if (f.count() == 0 && f.call().type().hasTuple()) {
@@ -390,26 +428,6 @@ public final class AbstWriterWithInstance {
                     }
                 }
 
-        //Add lower bound skolems
-        for (A4Tuple lb : lower.keySet()) {
-            StringBuilder sb = new StringBuilder();
-            String label = "$LB " + lb.toString();
-            out.print("\n<skolem label=\"" + label + "\" ID=\"m" + m + "\">\n");
-
-            out.print("   <tuple>");
-            for (int i = 0; i < lb.arity(); i++)
-                Util.encodeXMLs(out, " <atom label=\"", lb.atom(i), "\"/>");
-            out.print(" </tuple>\n");
-
-            for (List<PrimSig> ps : lb.type().fold()) {
-                out.print("   <types>");
-                for (PrimSig sig : ps)
-                    Util.encodeXMLs(out, " <type ID=\"", map(sig), "\"/>");
-                out.print(" </types>\n");
-            }
-            out.print("</skolem>\n");
-            m++;
-        }
         out.print("\n</instance>\n");
     }
 
@@ -441,7 +459,7 @@ public final class AbstWriterWithInstance {
             throw new ErrorFatal("Error writing the solution XML file.");
     }
 
-    public static void writeTheme(A4Solution sol, PrintWriter out, HashMap<A4Tuple,Sig> lowerSig, HashMap<A4Tuple,Field> lowerField) {
+    public static void writeTheme(A4Solution sol, PrintWriter out, HashMap<A4Tuple,String> lowerSig, HashMap<A4Tuple,String> lowerField) {
         if (!sol.satisfiable())
             throw new ErrorAPI("This solution is unsatisfiable. Cannot create a theme.");
         try {
@@ -475,16 +493,18 @@ public final class AbstWriterWithInstance {
 
             for (A4Tuple lb : lowerSig.keySet()) {
                 out.print("\n<node color =\"Yellow\" label=\"$LB\">\n");
-                String prettyPrintLabel = lowerSig.get(lb).label;
+                String prettyPrintLabel = lowerSig.get(lb);
                 if (prettyPrintLabel.contains("this/"))
                     prettyPrintLabel = prettyPrintLabel.substring(prettyPrintLabel.indexOf("this/") + 5);
-                out.print("   <set name=\"$LB " + lb.toString() + "\" type=\"" + prettyPrintLabel + "\"/>");
+                prettyPrintLabel = prettyPrintLabel.substring(0, prettyPrintLabel.indexOf("$"));
+
+                out.print("   <set name=\"$LB " + lowerSig.get(lb) + "\" type=\"" + prettyPrintLabel + "\"/>");
                 out.print("\n</node>\n");
             }
 
             for (A4Tuple lb : lowerField.keySet()) {
-                out.print("\n<edge color =\"Black\" label=\"$LB " + lb.toString() + "\">\n");
-                out.print("   <relation name=\"$LB " + lb.toString() + "\"> ");
+                out.print("\n<edge color =\"Black\" label=\"$LB " + lowerField.get(lb).split(":")[0] + "\">\n");
+                out.print("   <relation name=\"$LB " + lowerField.get(lb).split(":")[1] + "\"> ");
 
                 String[] prettyPrint = (lb.type().toString().substring(1, lb.type().toString().length() - 1)).split("->");
                 for(String print : prettyPrint) {

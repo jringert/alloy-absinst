@@ -1199,9 +1199,8 @@ public final class SimpleGUI implements ComponentListener, Listener {
         opt.originalFilename = Util.canon(text.get().getFilename());
         opt.solver = Solver.get();
 
-        //CompModule world = CompUtil.parseEverything_fromString(A4Reporter.NOP, text.get().getText());
         CompModule world = CompUtil.parseEverything_fromFile(A4Reporter.NOP, text.takeSnapshot(), Util.canon(text.get().getFilename()), (Version.experimental && ImplicitThis.get()) ? 2 : 1);
-        viz.setWorld(world);
+        viz.setWorld(world, text.get().getText());
         viz.setCommand(world.getAllCommands().get(latestCommand));
         A4Options opt2 = new A4Options();
         opt2.solver = Solver.get();

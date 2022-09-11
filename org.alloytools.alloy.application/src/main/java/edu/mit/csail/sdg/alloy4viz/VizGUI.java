@@ -165,7 +165,7 @@ public final class VizGUI implements ComponentListener {
     /** The buttons on the toolbar. */
     private final JButton       projectionButton, openSettingsButton, closeSettingsButton, magicLayout,
                     loadSettingsButton, saveSettingsButton, saveAsSettingsButton, resetSettingsButton, updateSettingsButton,
-                    openEvaluatorButton, closeEvaluatorButton, enumerateButton, vizButton, treeButton, minButton,
+                    openEvaluatorButton, closeEvaluatorButton, enumerateButton, vizButton, treeButton, absButton, conButton,
                     txtButton, tableButton, leftNavButton, rightNavButton, cnfgButton, forkButton, initButton, pathButton/*
                                                                                                                           * , dotButton,
                                                                                                                           * xmlButton
@@ -733,7 +733,13 @@ public final class VizGUI implements ComponentListener {
             txtButton = makeSolutionButton("Txt", "Show the textual output for the Graph", "images/24_plaintext.gif", doShowTxt());
             tableButton = makeSolutionButton("Table", "Show the table output for the Graph", "images/24_plaintext.gif", doShowTable());
             treeButton = makeSolutionButton("Tree", "Show Tree", "images/24_texttree.gif", doShowTree());
-            minButton = makeSolutionButton("Min", "Show min", "images/24_texttree.gif", doShowMinimize());
+
+            if (frame != null)
+                addDivider();
+
+            absButton = makeSolutionButton("Abs", "Show abstract instance", "images/24_graph.gif", doShowAbstract());
+            conButton = makeSolutionButton("Orig", "Show original concrete instance", "images/24_graph.gif", doShowOrig());
+            conButton.setEnabled(false);
 
             if (frame != null)
                 addDivider();
@@ -911,13 +917,16 @@ public final class VizGUI implements ComponentListener {
         vizButton.setVisible(frame != null);
         treeButton.setVisible(frame != null);
         txtButton.setVisible(frame != null);
-        minButton.setVisible(frame != null);
+        absButton.setVisible(frame != null);
+        conButton.setVisible(frame != null);
 
         if (enumerationXML != null) {
-            minButton.setEnabled(false);
+            absButton.setEnabled(false);
+            conButton.setEnabled(true);
         }
         else {
-            minButton.setEnabled(true);
+            absButton.setEnabled(true);
+            conButton.setEnabled(false);
         }
 
         // dotButton.setVisible(frame!=null);
@@ -2119,16 +2128,40 @@ public final class VizGUI implements ComponentListener {
         return wrapMe();
     }
 
+    public Runner doShowOrig() {
+        if (!wrap) {
+            xmlFileName = enumerationXML;
+            enumerationXML = null;
+            String defaultTheme = System.getProperty("alloy.theme0");
+            for (VizState myState : myStates)
+                myState.resetTheme();
+            loadXML(xmlFileName, true);
+            return null;
+        }
+        return wrapMe();
+    }
+
     @SuppressWarnings("restriction" )
-    public Runner doShowMinimize() {
+    public Runner doShowAbstract() {
         if (!wrap) {
 
-            minButton.setEnabled(false);
+            absButton.setEnabled(false);
+            conButton.setEnabled(true);
             currentMode = VisualizerMode.Viz;
 
             enumerationXML = xmlFileName;
+            world = CompUtil.parseEverything_fromString(A4Reporter.NOP, modelText);
+
             A4Solution inst = myStates.get(statepanes - 1).getOriginalInstance().originalA4;
+            A4Solution inst_orig = myStates.get(statepanes - 1).getOriginalInstance().originalA4;
+
             Command command = cmd;
+            for(Command c : world.getAllCommands()) {
+                if (c.toString().equals(cmd.toString())) {
+                    command = c;
+                }
+            }
+
             Command getInst = new Command(cmd.check, cmd.overall, cmd.bitwidth, cmd.maxseq, CompUtil.parseOneExpression_fromString(world, inst.executableExpr()));
             inst = TranslateAlloyToKodkod.execute_command(A4Reporter.NOP, world.getAllReachableSigs(), getInst, opt);
 
@@ -2153,7 +2186,7 @@ public final class VizGUI implements ComponentListener {
             Minimizer m = new Minimizer();
             m.minimize(world, command, inst, opt, ub);
 
-            upperbound_stmt += "<b>UB = </b>" + m.printUpperBound().toString();
+            upperbound_stmt += "<b>UB = </b>" + m.printUpperBound();//m.getUpperBound().toString();
 
             inst = m.getInstOrig();
             HashMap<A4Tuple,String> lower = m.getLowerBoundOriginMap();
@@ -2172,10 +2205,36 @@ public final class VizGUI implements ComponentListener {
 
             if (display_selection == 1) { //overlay
 
+                String[] temp = inst.toString().split("\n");
+                HashMap<String,String> skolem_map = new HashMap<String,String>();
+                for (String t : temp) {
+                    t = t.trim();
+                    if (t.startsWith("skolem ")) {
+                        t = t.replace("skolem ", "");
+                        String[] assignment = t.split("=");
+                        skolem_map.put(assignment[0].replace("$", ""), assignment[1].substring(1, assignment[1].length() - 1));
+                    }
+                }
+
                 PrintWriter out;
                 try {
                     out = new PrintWriter(System.getProperty("user.dir") + "/instWBounds.xml", "UTF-8");
-                    AbstWriterWithInstance.writeInstance(rep, inst, out, null, null, lower, upper);
+
+                    HashMap<A4Tuple, String> new_lower = new HashMap<A4Tuple,String>();
+                    for(A4Tuple t : lower.keySet()) {
+                        if (skolem_map.containsKey(t.toString().replace("$", "")))
+                            new_lower.put(t, skolem_map.get(t.toString().replace("$", "")));
+                        else {
+                            String curr = t.toString();
+                            curr = curr.replace("$", "");
+                            for (String replace : skolem_map.keySet()) {
+                                curr = curr.replace(replace, skolem_map.get(replace));
+                            }
+                            new_lower.put(t, curr);
+                        }
+                    }
+
+                    AbstWriterWithInstance.writeInstance(rep, inst_orig, out, null, null, new_lower, upper);
                     if (out.checkError())
                         throw new ErrorFatal("Error writing the solution XML file.");
                     out.close();
@@ -2187,10 +2246,25 @@ public final class VizGUI implements ComponentListener {
                     e2.printStackTrace();
                 }
 
+                HashMap<A4Tuple,String> new_lowerSig = new HashMap<A4Tuple,String>();
+                for (A4Tuple t : lowerSig.keySet()) {
+                    new_lowerSig.put(t, skolem_map.get(t.toString().replace("$", "")));
+                }
+
+                HashMap<A4Tuple,String> new_lowerField = new HashMap<A4Tuple,String>();
+                for (A4Tuple t : lowerField.keySet()) {
+                    String curr = t.toString();
+                    curr = curr.replace("$", "");
+                    for (String replace : skolem_map.keySet()) {
+                        curr = curr.replace(replace, skolem_map.get(replace));
+                    }
+                    new_lowerField.put(t, lowerField.get(t).label + ":" + curr);
+                }
+
                 PrintWriter out_theme = null;
                 try {
                     out_theme = new PrintWriter(System.getProperty("user.dir") + "/instWBounds.thm");
-                    AbstWriterWithInstance.writeTheme(inst, out_theme, lowerSig, lowerField);
+                    AbstWriterWithInstance.writeTheme(inst_orig, out_theme, new_lowerSig, new_lowerField);
                     out_theme.close();
                 } catch (FileNotFoundException e1) {
                     // TODO Auto-generated catch block
@@ -2199,11 +2273,36 @@ public final class VizGUI implements ComponentListener {
 
                 loadXML(System.getProperty("user.dir") + "/instWBounds.xml", true);
                 loadThemeFile(System.getProperty("user.dir") + "/instWBounds.thm");
-            } else { //indepedent
+            } else { //independent
                 PrintWriter out = null;
                 try {
                     out = new PrintWriter(System.getProperty("user.dir") + "/instWBounds.xml");
-                    AbsWriter.writeInstance(rep, inst, out, null, null, lower, upper);
+
+                    String[] temp = inst.toString().split("\n");
+                    HashMap<String,String> skolem_map = new HashMap<String,String>();
+                    for (String t : temp) {
+                        t = t.trim();
+                        if (t.startsWith("skolem ")) {
+                            t = t.replace("skolem ", "");
+                            String[] assignment = t.split("=");
+                            skolem_map.put(assignment[0].replace("$", ""), assignment[1].substring(1, assignment[1].length() - 1));
+                        }
+                    }
+                    HashMap<A4Tuple,String> new_lower = new HashMap<A4Tuple,String>();
+                    for (A4Tuple t : lower.keySet()) {
+                        if (skolem_map.containsKey(t.toString().replace("$", "")))
+                            new_lower.put(t, skolem_map.get(t.toString().replace("$", "")));
+                        else {
+                            String curr = t.toString();
+                            curr = curr.replace("$", "");
+                            for (String replace : skolem_map.keySet()) {
+                                curr = curr.replace(replace, skolem_map.get(replace));
+                            }
+                            new_lower.put(t, curr);
+                        }
+                    }
+
+                    AbsWriter.writeInstance(rep, inst_orig, out, null, null, new_lower, upper);
                     out.close();
                 } catch (FileNotFoundException e1) {
                     // TODO Auto-generated catch block
@@ -2361,8 +2460,11 @@ public final class VizGUI implements ComponentListener {
     }
 
     //Helper methods for minimization
-    public void setWorld(CompModule world) {
+    String modelText;
+
+    public void setWorld(CompModule world, String modelText) {
         this.world = world;
+        this.modelText = modelText;
     }
 
     public void setCommand(Command cmd) {

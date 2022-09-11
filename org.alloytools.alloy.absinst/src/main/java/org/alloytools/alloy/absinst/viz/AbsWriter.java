@@ -184,7 +184,7 @@ public final class AbsWriter {
                 //Detect if in lower bound.
                 boolean write_tuple = false;
                 for (A4Tuple lb : lower.keySet()) {
-                    if (t.toString().contentEquals(lb.toString())) {
+                    if (lower.get(lb).toString().contentEquals(t.toString())) {
                         write_tuple = true;
                         break;
                     }
@@ -268,7 +268,7 @@ public final class AbsWriter {
                     //Otherwise, check if in lower bound, then write
                     boolean write_tuple = false;
                     for (A4Tuple lb : lower.keySet()) {
-                        if (lb.toString().equals(t.toString())) {
+                        if (lower.get(lb).equals(t.toString())) {
                             write_tuple = true;
                             break;
                         }
@@ -288,29 +288,7 @@ public final class AbsWriter {
         out.print("</sig>\n");
 
         for (Field field : x.getFields()) {
-            //Figure out if the field has a tuple in the lower bound, and/or upper bound
-            boolean write_field_upper = false;
-            for (String ub : upper) {
-                if (field.toString().contentEquals(ub)) {
-                    write_field_upper = true;
-                    break;
-                }
-            }
-            boolean write_field_lower = false;
-            for (A4Tuple lb : lower.keySet()) {
-                if (lower.get(lb).equals(field.toString())) {
-                    write_field_lower = true;
-                    break;
-                }
-            }
-
-            //Case: Write specific tuple
-            if (write_field_lower && !write_field_upper)
-                writeFieldLowerBound(field, state, lower);
-
-            //Case: Write the whole field, even if a tuple is specifically in lower bound
-            if (write_field_upper)
-                writeField(field, state);
+            writeFieldLowerBound(field, state, lower);
         }
 
         return ts;
@@ -369,18 +347,27 @@ public final class AbsWriter {
     }
 
     /** Write the given Skolem. */
-    private void writeSkolem(ExprVar x, int state) throws Err {
+    private void writeSkolem(ExprVar x, int state, HashMap<A4Tuple,String> lower, ArrayList<String> upper) throws Err {
         try {
             if (sol == null)
                 return; // when writing a metamodel, skip the skolems
             if (x.type().hasNoTuple())
                 return; // we do not allow "none" in the XML file's type
                        // declarations
-            StringBuilder sb = new StringBuilder();
-            Util.encodeXMLs(sb, "\n<skolem label=\"", x.label, "\" ID=\"", map(x), "\">\n");
-            if (writeExpr(sb.toString(), x, state)) {
-                out.print("</skolem>\n");
+            boolean write_tuple = false;
+            for (A4Tuple tuple : lower.keySet()) {
+                if (x.toString().equals(lower.get(tuple)))
+                    write_tuple = true;
             }
+
+            if (write_tuple) {
+                StringBuilder sb = new StringBuilder();
+                Util.encodeXMLs(sb, "\n<skolem label=\"", x.label, "\" ID=\"", map(x), "\">\n");
+                if (writeExpr(sb.toString(), x, state)) {
+                    out.print("</skolem>\n");
+                }
+            }
+
         } catch (Throwable ex) {
             throw new ErrorFatal("Error evaluating skolem " + x.label, ex);
         }
@@ -425,7 +412,7 @@ public final class AbsWriter {
             for (ExprVar s : sol.getAllSkolems()) {
                 if (rep != null)
                     rep.write(s);
-                writeSkolem(s, state);
+                writeSkolem(s, state, lower, upper);
             }
         int m = 0;
         if (sol != null && extraSkolems != null)

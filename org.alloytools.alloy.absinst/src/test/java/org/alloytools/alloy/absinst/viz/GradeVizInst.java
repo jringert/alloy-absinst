@@ -55,7 +55,7 @@ public class GradeVizInst {
             throw new ErrorFatal("Error writing the solution XML file.");
 
         PrintWriter out_theme = new PrintWriter(System.getProperty("user.dir") + "/src/test/inst/gradeWInst.thm");
-        AbstWriterWithInstance.writeTheme(instance, out_theme, lowerSig, lowerField);
+        //AbstWriterWithInstance.writeTheme(instance, out_theme, lowerSig, lowerField);
 
         //This hangs
         //This also seems to have some state issues where the first time I run it, it does not load the theme in or update once loading the theme in
