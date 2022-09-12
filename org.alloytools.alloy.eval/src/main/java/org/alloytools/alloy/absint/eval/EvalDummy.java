@@ -1,7 +1,7 @@
 package org.alloytools.alloy.absint.eval;
 
-import org.alloytools.alloy.TestUtil;
 import org.alloytools.alloy.absinst.Minimizer;
+import org.alloytools.alloy.absinst.TestUtil;
 import org.alloytools.alloy.absinst.iter.MinimizerManualIterationTest;
 
 public class EvalDummy {

@@ -1,4 +1,4 @@
-package org.alloytools.alloy;
+package org.alloytools.alloy.absinst;
 
 import java.io.PrintStream;
 

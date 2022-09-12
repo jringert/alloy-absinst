@@ -12,6 +12,5 @@ src=${^src}, src/test/java
 
 Export-Package: \
 	org.alloytools.alloy.absinst,\
-	org.alloytools.alloy,\
 	org.alloytools.alloy.absinst.viz,\
 	org.alloytools.alloy.absinst.iter

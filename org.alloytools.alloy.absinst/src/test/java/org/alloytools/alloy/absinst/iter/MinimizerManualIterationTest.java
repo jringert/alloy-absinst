@@ -7,8 +7,8 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
 
-import org.alloytools.alloy.TestUtil;
 import org.alloytools.alloy.absinst.Minimizer;
+import org.alloytools.alloy.absinst.TestUtil;
 import org.alloytools.alloy.absinst.UBKind;
 import org.junit.Test;
 
